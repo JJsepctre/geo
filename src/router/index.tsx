@@ -1,6 +1,7 @@
 import React from 'react'
 import {createBrowserRouter, Link} from 'react-router-dom'
 import HelloPage from '../pages/HelloPage'
+import GeoPointSearch from '../pages/GeoPoint/GeoPointSearch'
 
 const router = createBrowserRouter([
   {
@@ -9,6 +10,9 @@ const router = createBrowserRouter([
     <div>
       <h1>Hello World222</h1>
       <Link to="about">About Us</Link>
+      <br />
+      <Link to="geo-search">工点搜索 (原版)</Link>
+      <br />
     </div>
     )
   },
@@ -19,6 +23,10 @@ const router = createBrowserRouter([
   {
     path: 'hello',
     element: <HelloPage />
+  },
+  {
+    path: 'geo-search',
+    element: <GeoPointSearch />
   }
 ])
 

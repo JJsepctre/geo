@@ -1,0 +1,80 @@
+/* 隧道菜单样式 */
+.tunnel-menu {
+  background: transparent !important;
+}
+
+.tunnel-menu .arco-menu-inner {
+  padding: 0 !important;
+}
+
+/* 主要隧道菜单项紫色背景 */
+.tunnel-menu .arco-menu-sub:first-child > .arco-menu-item-inner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: white !important;
+  margin-bottom: 8px !important;
+  padding: 12px 16px !important;
+  min-height: 56px !important;
+}
+
+.tunnel-menu .arco-menu-sub:first-child > .arco-menu-item-inner:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6c63b5 100%) !important;
+}
+
+.tunnel-menu .arco-menu-sub:first-child .arco-menu-icon-suffix {
+  color: white !important;
+}
+
+/* 其他隧道菜单项白色背景 */
+.tunnel-menu .arco-menu-sub:not(:first-child) > .arco-menu-item-inner {
+  background: white !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  margin-bottom: 8px !important;
+  padding: 12px 16px !important;
+  min-height: 56px !important;
+}
+
+.tunnel-menu .arco-menu-sub:not(:first-child) > .arco-menu-item-inner:hover {
+  background: #f8f9fa !important;
+  border-color: #d0d0d0 !important;
+}
+
+/* 菜单内容区域 */
+.tunnel-menu .arco-menu-sub-content {
+  background: white !important;
+  border: none !important;
+  border-radius: 0 0 8px 8px !important;
+  margin-top: -8px !important;
+  padding: 0 !important;
+}
+
+/* 表格样式优化 */
+.arco-table-stripe .arco-table-tr:nth-child(2n) {
+  background-color: #fafafa;
+}
+
+.arco-table-border .arco-table-container {
+  border-radius: 8px;
+}
+
+/* 按钮组优化 */
+.arco-btn-outline {
+  background: white;
+  border-color: #e0e0e0;
+}
+
+.arco-btn-outline:hover {
+  border-color: #165dff;
+  color: #165dff;
+}
+
+/* 选项卡样式优化 */
+.arco-tabs-nav-tab {
+  padding: 12px 24px !important;
+}
+
+.arco-tabs-nav-tab-active {
+  font-weight: 600 !important;
+}
