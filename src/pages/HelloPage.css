@@ -1,0 +1,82 @@
+/* 用户区域hover效果 */
+.user-area:hover {
+  background-color: #f2f3f5 !important;
+  transition: background-color 0.2s;
+}
+
+/* 工点列表项hover效果 */
+.work-point-item:hover {
+  background-color: #f7f8fa !important;
+  margin: 0 -12px !important;
+  padding: 12px !important;
+  border-radius: 4px !important;
+  transition: all 0.2s;
+}
+
+/* 隧道卡片hover效果 */
+.tunnel-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+/* 自定义滚动条 */
+.arco-layout-sider::-webkit-scrollbar {
+  width: 6px;
+}
+
+.arco-layout-sider::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.arco-layout-sider::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.arco-layout-sider::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 搜索框聚焦效果 */
+.arco-input-wrapper.arco-input-focus {
+  border-color: #165dff;
+  box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.1);
+}
+
+/* 置顶工点样式 */
+.work-point-top {
+  background: linear-gradient(90deg, rgba(22, 93, 255, 0.05) 0%, transparent 100%);
+}
+
+/* 加载状态优化 */
+.arco-spin {
+  min-height: 100px;
+}
+
+/* 卡片阴影优化 */
+.arco-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+/* 按钮hover效果 */
+.arco-btn-text:hover {
+  background-color: rgba(22, 93, 255, 0.1) !important;
+  color: #165dff !important;
+}
+
+/* 空状态样式 */
+.arco-empty {
+  color: #86909c;
+}
+
+/* 项目信息区域样式 */
+.project-info-card {
+  background: linear-gradient(135deg, #f7f8fa 0%, #ffffff 100%);
+  border-left: 4px solid #165dff;
+  transition: all 0.3s ease;
+}
+
+.project-info-card:hover {
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.1);
+}

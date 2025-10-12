@@ -2,6 +2,10 @@ import React from 'react'
 import {createBrowserRouter, Link} from 'react-router-dom'
 import HelloPage from '../pages/HelloPage'
 import GeoPointSearch from '../pages/GeoPoint/GeoPointSearch'
+import ForecastDesignPage from '../pages/ForecastDesignPage'
+import ForecastRockPage from '../pages/ForecastRockPage'
+import ForecastGeologyPage from '../pages/ForecastGeologyPage'
+import DesignLayout from '../components/DesignLayout'
 
 const router = createBrowserRouter([
   {
@@ -17,16 +21,32 @@ const router = createBrowserRouter([
     )
   },
   {
-    path: 'about',
+    path: '/about',
     element: <div>About</div>
   },
   {
-    path: 'hello',
+    path: '/hello',
     element: <HelloPage />
   },
   {
     path: 'geo-search',
     element: <GeoPointSearch />
+  },
+  {
+    path: 'forecast/design',
+    element: (
+      <DesignLayout>
+        <ForecastDesignPage />
+      </DesignLayout>
+    )
+  },
+  {
+    path: 'forecast/rock',
+    element: <ForecastRockPage />
+  },
+  {
+    path: 'forecast/geology',
+    element: <ForecastGeologyPage />
   }
 ])
 
