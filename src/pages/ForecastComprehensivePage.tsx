@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { 
   Card, 
   Button, 
@@ -17,56 +17,132 @@ import { IconUser, IconDown } from '@arco-design/web-react/icon'
 
 const { Header, Content } = Layout
 const { Text } = Typography
+const { RangePicker } = DatePicker
+
+// 模拟数据
+const mockData = [
+  {
+    id: '1',
+    name: '大庆山隧道进出口明洞',
+    code: '大庆-IN-MD',
+    length: '+65m',
+    type: '明洞',
+    risk: '中风险',
+  },
+  {
+    id: '2',
+    name: '大庆山隧道进出口洞门',
+    code: '大庆-IN-GATE',
+    length: '+12m',
+    type: '洞门',
+    risk: '中风险',
+  },
+  {
+    id: '3',
+    name: '大庆山隧道进出口小里程段',
+    code: '大庆-IN-S',
+    length: '-435m',
+    type: '隧道段',
+    risk: '高风险',
+  },
+  {
+    id: '4',
+    name: '大庆山隧道主洞Ⅰ段',
+    code: '大庆-MAIN-1',
+    length: '+856m',
+    type: '主洞段',
+    risk: '中风险',
+  },
+  {
+    id: '5',
+    name: '大庆山隧道主洞Ⅱ段',
+    code: '大庆-MAIN-2',
+    length: '+1205m',
+    type: '主洞段',
+    risk: '高风险',
+  },
+  {
+    id: '6',
+    name: '大庆山隧道主洞Ⅲ段',
+    code: '大庆-MAIN-3',
+    length: '+932m',
+    type: '主洞段',
+    risk: '低风险',
+  },
+  {
+    id: '7',
+    name: '大庆山隧道横通道Ⅰ#',
+    code: '大庆-CROSS-1',
+    length: '+28m',
+    type: '横通道',
+    risk: '中风险',
+  },
+]
 
 // 表格列定义
 const columns = [
   {
-    title: '预报方法',
-    dataIndex: 'method',
-    key: 'method',
-  },
-  {
-    title: '预报时间',
-    dataIndex: 'time',
-    key: 'time',
-  },
-  {
-    title: '掌子面里程',
-    dataIndex: 'mileage',
-    key: 'mileage',
-  },
-  {
-    title: '预报长度',
-    dataIndex: 'length',
-    key: 'length',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-  },
-  {
-    title: '上传提示',
-    dataIndex: 'uploadTip',
-    key: 'uploadTip',
+    title: '工点名称',
+    dataIndex: 'name',
+    key: 'name',
+    render: (name: string, record: any) => (
+      <div style={{ padding: '12px 0' }}>
+        <div style={{ 
+          fontSize: '16px', 
+          fontWeight: 500, 
+          color: '#1d2129',
+          marginBottom: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ 
+            width: '6px', 
+            height: '6px', 
+            backgroundColor: '#ff4d4f', 
+            borderRadius: '50%',
+            display: 'inline-block'
+          }} />
+          {name}
+        </div>
+        <div style={{ 
+          fontSize: '13px', 
+          color: '#86909c',
+          display: 'flex',
+          gap: '16px'
+        }}>
+          <span>里程: {record.code}</span>
+          <span>长度: {record.length}</span>
+          <span>类型: {record.type}</span>
+          <span style={{ 
+            color: record.risk === '高风险' ? '#ff4d4f' : record.risk === '中风险' ? '#ff7d00' : '#00b42a'
+          }}>
+            {record.risk}
+          </span>
+        </div>
+      </div>
+    ),
   },
   {
     title: '操作',
     dataIndex: 'operation',
     key: 'operation',
+    width: 200,
+    align: 'center' as const,
     render: () => (
-      <Button type="text" size="small">
-        操作
-      </Button>
+      <Space>
+        <Button type="text" size="small" style={{ color: '#165dff' }}>
+          取消查询
+        </Button>
+        <Button type="text" size="small" style={{ color: '#165dff' }}>
+          查顶
+        </Button>
+      </Space>
     ),
   },
 ]
 
-function ForecastGeologyPage() {
-  const [selectedMethod, setSelectedMethod] = useState('物探法')
-  
-  const methods = ['物探法', '掌子面素描', '洞身素描', '钻探法', '地表补充']
-  
+function ForecastComprehensivePage() {
   const userMenuItems = [
     { key: 'profile', label: '个人中心' },
     { key: 'settings', label: '设置' },
@@ -144,39 +220,39 @@ function ForecastGeologyPage() {
           </Button>
         </div>
 
-        {/* 探测方法选项卡 */}
-        <Card style={{ marginBottom: '24px' }}>
-          <Space size="medium" wrap>
-            {methods.map(method => (
-              <Button
-                key={method}
-                type={selectedMethod === method ? 'primary' : 'outline'}
-                onClick={() => setSelectedMethod(method)}
-              >
-                {method}
-              </Button>
-            ))}
-          </Space>
-        </Card>
-
         {/* 筛选条件 */}
         <Card style={{ marginBottom: '24px' }}>
-          <Space size="large">
+          <Space size="large" wrap>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span>预报方法：</span>
+              <span>处置类型：</span>
               <Select
-                placeholder="请选择预报方法"
+                placeholder="请选择处置类型"
                 style={{ width: 200 }}
                 allowClear
               >
-                <Select.Option value="方法1">方法1</Select.Option>
-                <Select.Option value="方法2">方法2</Select.Option>
+                <Select.Option value="类型1">类型1</Select.Option>
+                <Select.Option value="类型2">类型2</Select.Option>
+              </Select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span>处置状态：</span>
+              <Select
+                placeholder="请选择处置状态"
+                style={{ width: 200 }}
+                allowClear
+              >
+                <Select.Option value="状态1">状态1</Select.Option>
+                <Select.Option value="状态2">状态2</Select.Option>
               </Select>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span>预报时间：</span>
-              <DatePicker style={{ width: 200 }} placeholder="请选择日期" />
+              <RangePicker 
+                style={{ width: 300 }} 
+                placeholder={['开始日期', '结束日期']}
+              />
             </div>
 
             <Button type="primary" icon={<span>🔍</span>}>
@@ -191,17 +267,8 @@ function ForecastGeologyPage() {
         {/* 操作按钮 */}
         <Card style={{ marginBottom: '24px' }}>
           <Space>
-            <Button type="primary" icon={<span>📥</span>}>
-              下载模板
-            </Button>
-            <Button type="primary" icon={<span>📤</span>}>
-              导入
-            </Button>
             <Button type="primary" icon={<span>➕</span>}>
               新增
-            </Button>
-            <Button type="primary" status="danger" icon={<span>🗑️</span>}>
-              批量删除
             </Button>
           </Space>
         </Card>
@@ -210,13 +277,19 @@ function ForecastGeologyPage() {
         <Card>
           <Table
             columns={columns}
-            data={[]}
+            data={mockData}
             pagination={{
-              total: 0,
+              total: mockData.length,
               pageSize: 10,
               showTotal: true,
+              showJumper: true,
             }}
             noDataElement={<Empty description="暂无数据" />}
+            rowKey="id"
+            border={{
+              wrapper: true,
+              cell: true,
+            }}
           />
         </Card>
       </Content>
@@ -224,5 +297,4 @@ function ForecastGeologyPage() {
   )
 }
 
-export default ForecastGeologyPage
-
+export default ForecastComprehensivePage

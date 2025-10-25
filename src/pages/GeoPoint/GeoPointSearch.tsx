@@ -1,23 +1,14 @@
 import React, { useState } from 'react';
 import { Button, Card, Input, Table, Tag, Typography, Space, Menu, Grid } from '@arco-design/web-react';
-import { IconSearch, IconDown, IconRight } from '@arco-design/web-react/icon';
+import { IconSearch } from '@arco-design/web-react/icon';
 import DetectionChart from '../../components/DetectionChart';
 import './GeoPointSearch.css';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Row, Col } = Grid;
 
 // 类型定义
 type DetectionMethodName = '物探法' | '掌子面素描' | '洞身素描' | '钻探法' | '地表补充';
-
-interface DetectionDetail {
-  method: string;
-  time: string;
-  mileage: string;
-  length: string;
-  status: string;
-  operator: string;
-}
 
 // 测试数据
 const mockData = {
@@ -196,9 +187,9 @@ const GeoPointSearchFinal: React.FC = () => {
             {/* ECharts图表区域 - 独立显示，不受选项卡影响 */}
             <div style={{ marginBottom: 32 }}>
               <Title heading={5} style={{ marginBottom: 16, fontSize: '16px' }}>探测信息图</Title>
-              <DetectionChart data={{
-                detectionMethods: mockData.detectionMethods,
-                detectionDetails: mockData.detectionDetails[getSelectedMethod('main-tunnel')] || []
+              <DetectionChart data={{ 
+                detectionMethods: mockData.detectionMethods, 
+                detectionDetails: mockData.detectionDetails 
               }} />
             </div>
 
@@ -321,7 +312,7 @@ const GeoPointSearchFinal: React.FC = () => {
             <div style={{ marginBottom: 32 }}>
               <Title heading={5} style={{ marginBottom: 16, fontSize: '16px' }}>探测信息图</Title>
               {/* 传入空的 detectionMethods 和 detectionDetails，DetectionChart 会只渲染坐标轴 */}
-              <DetectionChart data={{ detectionMethods: [], detectionDetails: [] }} />
+              <DetectionChart data={{ detectionMethods: [], detectionDetails: {} }} />
             </div>
 
             <div style={{ 
@@ -442,7 +433,7 @@ const GeoPointSearchFinal: React.FC = () => {
 
             <div style={{ marginBottom: 32 }}>
               <Title heading={5} style={{ marginBottom: 16, fontSize: '16px' }}>探测信息图</Title>
-              <DetectionChart data={{ detectionMethods: [], detectionDetails: [] }} />
+              <DetectionChart data={{ detectionMethods: [], detectionDetails: {} }} />
             </div>
 
             <div style={{ 

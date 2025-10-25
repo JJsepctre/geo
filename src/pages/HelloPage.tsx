@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Layout, 
   Menu, 
@@ -10,23 +11,27 @@ import {
   Space,
   Typography,
   Divider,
-  List,
   Spin,
   Message,
   Empty,
-  Select
+  Select,
+  Collapse
 } from '@arco-design/web-react';
 import { IconSearch, IconUser, IconDown, IconFile } from '@arco-design/web-react/icon';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
-import { mockGeoForecastAPI } from '../services/mockAPI';
+import apiAdapter from '../services/apiAdapter';
 import { mockConfig } from '../services/mockConfig';
+import DetectionChart from '../components/DetectionChart';
 import './HelloPage.css';
 
 const { Header, Sider, Content } = Layout;
 const { Search } = Input;
 const { Text } = Typography;
+const CollapseItem = Collapse.Item;
 
 function HelloPage() {
+  const navigate = useNavigate();
+  
   // 状态管理
   const [selectedTunnel, setSelectedTunnel] = useState<string>('');
   const [tunnelList, setTunnelList] = useState<Tunnel[]>([]);
@@ -46,18 +51,45 @@ function HelloPage() {
   const [loadingWorkPoints, setLoadingWorkPoints] = useState(false);
   const [loadingProject, setLoadingProject] = useState(false);
 
+  // 工点详情状态
+  const [selectedWorkPoint, setSelectedWorkPoint] = useState<WorkPoint | null>(null);
+  const [detectionData, setDetectionData] = useState<any>(null);
+  const [loadingDetection, setLoadingDetection] = useState(false);
+
   const userMenuItems = [
     { key: 'profile', label: '个人中心' },
     { key: 'settings', label: '设置' },
     { key: 'logout', label: '退出登录' },
   ];
 
+  // 加载工点探测数据
+  const loadWorkPointDetectionData = useCallback(async (workPointId: string) => {
+    setLoadingDetection(true);
+    try {
+      const data = await apiAdapter.getGeoPointDetectionData(workPointId);
+      setDetectionData(data);
+    } catch (error) {
+      console.error('加载探测数据失败:', error);
+      Message.error('加载探测数据失败');
+    } finally {
+      setLoadingDetection(false);
+    }
+  }, []);
+
+  // 打开工点详情（展开折叠面板时）
+  const handleOpenWorkPointDetail = useCallback((workPoint: WorkPoint) => {
+    setSelectedWorkPoint(workPoint);
+    
+    // 加载探测数据
+    loadWorkPointDetectionData(workPoint.id);
+  }, [loadWorkPointDetectionData]);
+
   // 获取项目信息
   const fetchProjectInfo = useCallback(async () => {
     setLoadingProject(true);
     try {
       // 假设当前项目ID为 'project-001'
-      const project = await mockGeoForecastAPI.getProjectInfo('project-001');
+      const project = await apiAdapter.getProjectInfo('project-001');
       setProjectInfo(project);
     } catch (error) {
       console.error('获取项目信息失败:', error);
@@ -77,7 +109,7 @@ function HelloPage() {
   const fetchTunnelList = useCallback(async () => {
     setLoadingTunnels(true);
     try {
-      const tunnels = await mockGeoForecastAPI.getTunnelList('project-001');
+      const tunnels = await apiAdapter.getTunnelList('project-001');
       setTunnelList(tunnels);
       setFilteredTunnels(tunnels);
       
@@ -113,9 +145,9 @@ function HelloPage() {
     
     setLoadingWorkPoints(true);
     try {
-      const result = await mockGeoForecastAPI.getWorkPoints({ tunnelId, pageSize: 100 });
-      setWorkPoints(result.data);
-      setFilteredWorkPoints(result.data);
+      const workPointsData = await apiAdapter.getWorkPoints(tunnelId);
+      setWorkPoints(workPointsData);
+      setFilteredWorkPoints(workPointsData);
     } catch (error) {
       console.error('获取工点列表失败:', error);
       Message.error('获取工点列表失败');
@@ -204,7 +236,7 @@ function HelloPage() {
   // 工点置顶处理
   const handleWorkPointToggleTop = useCallback(async (workPointId: string, isTop: boolean) => {
     try {
-      await mockGeoForecastAPI.toggleWorkPointTop(workPointId, isTop);
+      await apiAdapter.toggleWorkPointTop(workPointId, isTop);
       
       // 更新本地状态
       const updatedWorkPoints = workPoints.map(wp => 
@@ -499,85 +531,118 @@ function HelloPage() {
                   style={{ padding: '40px 0' }}
                 />
               ) : (
-                <List
-                  dataSource={filteredWorkPoints}
-                  render={(item, index) => (
-                    <List.Item 
+                <Collapse
+                  accordion={false}
+                  style={{ backgroundColor: 'transparent', border: 'none' }}
+                  onChange={(key, keys) => {
+                    // 当展开工点时加载数据
+                    if (typeof key === 'string' && keys.includes(key)) {
+                      const workPoint = filteredWorkPoints.find(wp => wp.id === key);
+                      if (workPoint) {
+                        handleOpenWorkPointDetail(workPoint);
+                      }
+                    }
+                  }}
+                >
+                  {filteredWorkPoints.map((item) => (
+                    <CollapseItem
                       key={item.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '12px 0',
-                        borderBottom: index < filteredWorkPoints.length - 1 ? '1px solid #f2f3f5' : 'none',
-                        transition: 'background-color 0.2s'
-                      }}
-                      className="work-point-item"
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f7f8fa';
-                        e.currentTarget.style.margin = '0 -12px';
-                        e.currentTarget.style.padding = '12px';
-                        e.currentTarget.style.borderRadius = '4px';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.margin = '0';
-                        e.currentTarget.style.padding = '12px 0';
-                        e.currentTarget.style.borderRadius = '0';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                        <IconFile style={{ marginRight: '8px', color: '#86909c' }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ 
-                            fontWeight: item.isTop ? 600 : 400,
-                            color: item.isTop ? '#165dff' : '#1d2129',
-                            marginBottom: '4px'
-                          }}>
-                            {item.isTop && '📌 '}{item.name}
-                          </div>
-                          <div style={{ 
-                            fontSize: '12px', 
-                            color: '#86909c', 
-                            display: 'flex', 
-                            gap: '12px',
-                            flexWrap: 'wrap'
-                          }}>
-                            <span>编号: {item.code}</span>
-                            {item.type && <span>类型: {item.type}</span>}
-                            {item.riskLevel && (
-                              <span style={{ 
-                                color: item.riskLevel === '高风险' ? '#f53f3f' : 
-                                       item.riskLevel === '中风险' ? '#ff7d00' : '#00b42a'
+                      header={
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                            <IconFile style={{ marginRight: '12px', color: '#165dff', fontSize: '18px' }} />
+                            <div>
+                              <div style={{ 
+                                fontWeight: item.isTop ? 600 : 500,
+                                color: item.isTop ? '#165dff' : '#1d2129',
+                                fontSize: '15px'
                               }}>
-                                {item.riskLevel}
-                              </span>
-                            )}
-                            {item.geologicalCondition && <span>围岩: {item.geologicalCondition}</span>}
+                                {item.isTop && '📌 '}{item.name}
+                              </div>
+                              <div style={{ 
+                                fontSize: '12px', 
+                                color: '#86909c', 
+                                marginTop: '4px',
+                                display: 'flex',
+                                gap: '12px'
+                              }}>
+                                <span>里程: {item.code}</span>
+                                <span>长度: {item.length > 0 ? '+' : ''}{item.length}m</span>
+                                {item.type && <span>类型: {item.type}</span>}
+                                {item.riskLevel && (
+                                  <span style={{ 
+                                    color: item.riskLevel === '高风险' ? '#f53f3f' : 
+                                           item.riskLevel === '中风险' ? '#ff7d00' : '#00b42a',
+                                    fontWeight: 500
+                                  }}>
+                                    {item.riskLevel}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Text style={{ color: '#86909c', fontSize: '13px' }}>
-                          工点长度: {item.length > 0 ? '+' : ''}{item.length}
-                        </Text>
-                        
+                      }
+                      name={item.id}
+                      extra={
                         <Button
                           type="text"
                           size="small"
-                          onClick={() => handleWorkPointToggleTop(item.id, !item.isTop)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWorkPointToggleTop(item.id, !item.isTop);
+                          }}
                           style={{ 
                             color: item.isTop ? '#165dff' : '#86909c',
-                            padding: '4px 8px'
                           }}
                         >
                           {item.isTop ? '取消置顶' : '置顶'}
                         </Button>
+                      }
+                      destroyOnHide
+                    >
+                      {/* 工点详细内容 - 移除条件判断，让每个工点都能显示 */}
+                      <div style={{ padding: '16px 0' }}>
+                        {/* 探测信息图表 */}
+                        <Card title="探测信息" style={{ marginBottom: '20px' }}>
+                          <Spin loading={loadingDetection}>
+                            {detectionData && selectedWorkPoint?.id === item.id ? (
+                              <DetectionChart data={detectionData} />
+                            ) : (
+                              <Empty description="暂无探测数据" />
+                            )}
+                          </Spin>
+                        </Card>
+
+                        {/* 三个导航按钮 */}
+                        <Card>
+                          <div style={{ marginBottom: '20px' }}>
+                            <Space size="medium">
+                              <Button
+                                type="primary"
+                                onClick={() => navigate('/forecast/design')}
+                              >
+                                设计信息
+                              </Button>
+                              <Button
+                                type="primary"
+                                onClick={() => navigate('/forecast/geology')}
+                              >
+                                地质预报
+                              </Button>
+                              <Button
+                                type="primary"
+                                onClick={() => navigate('/forecast/comprehensive')}
+                              >
+                                综合分析
+                              </Button>
+                            </Space>
+                          </div>
+                        </Card>
                       </div>
-                    </List.Item>
-                  )}
-                />
+                    </CollapseItem>
+                  ))}
+                </Collapse>
               )}
             </Spin>
           </Card>

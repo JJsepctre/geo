@@ -19,7 +19,7 @@ interface DetectionDetail {
 interface DetectionChartProps {
   data: {
     detectionMethods: DetectionMethod[];
-    detectionDetails: DetectionDetail[];
+    detectionDetails: { [key: string]: DetectionDetail[] };
   };
 }
 
@@ -50,14 +50,18 @@ const DetectionChart: React.FC<DetectionChartProps> = ({ data }) => {
       formatter: function (params: any) {
         const dataIndex = params.dataIndex;
         const method = methodList[dataIndex];
-        const details = (data.detectionDetails || []).filter(d => d.method === method.name);
+        
+        // detectionDetails 是对象，通过方法名获取详情数组
+        const details = data.detectionDetails && data.detectionDetails[method.name] 
+          ? data.detectionDetails[method.name] 
+          : [];
         
         let tooltipContent = `
           <div style="padding: 10px; min-width: 200px;">
               <div style="font-weight: bold; margin-bottom: 8px; color: ${method.color || '#999'}">
               ${method.name}
             </div>
-            <div style="margin-bottom: 4px;"> ${method.count}</div>
+            <div style="margin-bottom: 4px;">次数: ${method.count}</div>
         `;
         
         if (details.length > 0) {
