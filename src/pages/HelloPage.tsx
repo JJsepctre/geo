@@ -449,12 +449,75 @@ function HelloPage() {
 
           {/* 工点搜索区域 */}
           <Card 
+<<<<<<< HEAD
             title={<span style={{ fontSize: '16px', fontWeight: 500 }}>工点搜索</span>}
             style={{ 
               width: '100%',
               marginBottom: '24px'
             }}
             bordered
+=======
+            title="工点搜索"
+            style={{ width: '100%' }}
+            extra={
+              <Space>
+                <Search 
+                  placeholder="输入名称搜索"
+                  // style={{ width: 200 }}
+                  value={workPointSearchKeyword}
+                  onChange={(value) => handleWorkPointSearch(value)}
+                  allowClear
+                  searchButton={
+                    <Button type="primary" icon={<IconSearch />}>
+                      搜索
+                    </Button>
+                  }
+                />
+                <Select
+                  placeholder="工点类型"
+                  style={{ width: 120 }}
+                  // value={selectedWorkPointType}
+                  onChange={setSelectedWorkPointType}
+                  allowClear
+                >
+                  <Select.Option value="明洞">明洞</Select.Option>
+                  <Select.Option value="洞门">洞门</Select.Option>
+                  <Select.Option value="主洞段">主洞段</Select.Option>
+                  <Select.Option value="横通道">横通道</Select.Option>
+                  <Select.Option value="暗挖段">暗挖段</Select.Option>
+                  <Select.Option value="救援站">救援站</Select.Option>
+                  <Select.Option value="通风井">通风井</Select.Option>
+                </Select>
+                <Select
+                  placeholder="风险等级"
+                  style={{ width: 100 }}
+                  // value={selectedRiskLevel}
+                  onChange={setSelectedRiskLevel}
+                  allowClear
+                >
+                  <Select.Option value="低风险">
+                    <span style={{ color: '#52c41a' }}>低风险</span>
+                  </Select.Option>
+                  <Select.Option value="中风险">
+                    <span style={{ color: '#faad14' }}>中风险</span>
+                  </Select.Option>
+                  <Select.Option value="高风险">
+                    <span style={{ color: '#f5222d' }}>高风险</span>
+                  </Select.Option>
+                </Select>
+                <Button 
+                  onClick={() => {
+                    // 刷新当前隧道的工点数据
+                    if (selectedTunnel) {
+                      fetchWorkPoints(selectedTunnel);
+                    }
+                  }}
+                >
+                  刷新
+                </Button>
+              </Space>
+            }
+>>>>>>> 03b9f6334946a5521ab7852c7740f2f7690044e2
           >
             {/* 搜索条件行 */}
             <div style={{ 
