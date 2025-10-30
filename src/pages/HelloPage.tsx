@@ -469,7 +469,7 @@ function HelloPage() {
               <Space>
                 <Search 
                   placeholder="输入名称搜索"
-                  style={{ width: 200 }}
+                  // style={{ width: 200 }}
                   value={workPointSearchKeyword}
                   onChange={(value) => handleWorkPointSearch(value)}
                   allowClear
@@ -482,7 +482,7 @@ function HelloPage() {
                 <Select
                   placeholder="工点类型"
                   style={{ width: 120 }}
-                  value={selectedWorkPointType}
+                  // value={selectedWorkPointType}
                   onChange={setSelectedWorkPointType}
                   allowClear
                 >
@@ -497,7 +497,7 @@ function HelloPage() {
                 <Select
                   placeholder="风险等级"
                   style={{ width: 100 }}
-                  value={selectedRiskLevel}
+                  // value={selectedRiskLevel}
                   onChange={setSelectedRiskLevel}
                   allowClear
                 >

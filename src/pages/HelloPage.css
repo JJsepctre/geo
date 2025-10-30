@@ -52,6 +52,7 @@
 /* 加载状态优化 */
 .arco-spin {
   min-height: 100px;
+  width: 100%;
 }
 
 /* 卡片阴影优化 */
