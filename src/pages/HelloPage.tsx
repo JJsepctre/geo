@@ -290,43 +290,79 @@ function HelloPage() {
         justifyContent: 'space-between',
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
         height: '64px',
-        flexShrink: 0
+        flexShrink: 0,
+        position: 'relative'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, color: '#1d2129', fontSize: '20px', fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+          <h3 style={{ margin: 0, color: '#165dff', fontSize: '20px', fontWeight: 600 }}>
             超前地质预报
           </h3>
-          <Menu
-            mode="horizontal"
+        </div>
+
+        {/* 中间导航选项卡 */}
+        <div style={{ 
+          position: 'absolute', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          display: 'flex',
+          gap: '40px',
+          alignItems: 'center',
+          height: '64px'
+        }}>
+          <div 
             style={{ 
-              backgroundColor: 'transparent', 
-              border: 'none',
-              marginLeft: '60px'
+              fontSize: '16px',
+              color: '#86909c',
+              cursor: 'pointer',
+              padding: '0 8px',
+              height: '64px',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'color 0.2s'
             }}
-            defaultSelectedKeys={['geology']}
+            onClick={() => navigate('/home')}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#165dff'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#86909c'}
           >
-            <Menu.Item key="home">首页</Menu.Item>
-            <Menu.Item key="geology">地质预报</Menu.Item>
-          </Menu>
+            首页
+          </div>
+          <div 
+            style={{ 
+              fontSize: '16px',
+              color: '#165dff',
+              cursor: 'pointer',
+              padding: '0 8px',
+              height: '64px',
+              display: 'flex',
+              alignItems: 'center',
+              borderBottom: '2px solid #165dff',
+              fontWeight: 500
+            }}
+          >
+            地质预报
+          </div>
         </div>
         
-        <Dropdown 
-          droplist={
-            <Menu>
-              {userMenuItems.map(item => (
-                <Menu.Item key={item.key}>{item.label}</Menu.Item>
-              ))}
-            </Menu>
-          }
-        >
-          <Space style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: '6px' }} className="user-area">
-            <Avatar size={32} style={{ backgroundColor: '#165dff' }}>
-              <IconUser />
-            </Avatar>
-            <Text>admin</Text>
-            <IconDown />
-          </Space>
-        </Dropdown>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Dropdown 
+            droplist={
+              <Menu>
+                {userMenuItems.map(item => (
+                  <Menu.Item key={item.key}>{item.label}</Menu.Item>
+                ))}
+              </Menu>
+            }
+          >
+            <Space style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: '6px' }} className="user-area">
+              <Avatar size={32} style={{ backgroundColor: '#165dff' }}>
+                <IconUser />
+              </Avatar>
+              <Text>admin</Text>
+              <IconDown />
+            </Space>
+          </Dropdown>
+        </div>
       </Header>
 
       <Layout style={{ height: 'calc(100vh - 64px)' }}>
@@ -459,26 +495,26 @@ function HelloPage() {
 
           {/* 项目信息区域 */}
           <div style={{ 
-            marginBottom: '24px',
-            padding: '20px 24px',
+            marginBottom: '10px',
+            padding: '4px 12px',
             backgroundColor: '#fff',
             borderRadius: '2px',
             border: '1px solid #e8e9ea',
-            borderLeft: '4px solid #165dff'
+            borderLeft: '2px solid #165dff'
           }}>
             <Spin loading={loadingProject}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '48px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '12px', lineHeight: '1.2' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '8px', color: '#165dff', fontSize: '16px' }} />
-                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '12px' }}>建设单位:</span>
+                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '12px' }} />
+                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '4px' }}>建设单位:</span>
                   <span style={{ color: '#4e5969' }}>
                     {projectInfo?.constructionUnit || '中国铁路昆明局集团有限公司'}
                   </span>
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '8px', color: '#165dff', fontSize: '16px' }} />
-                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '12px' }}>项目名称:</span>
+                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '12px' }} />
+                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '4px' }}>项目名称:</span>
                   <span style={{ color: '#4e5969' }}>
                     {projectInfo?.name || '渝昆高铁引入昆明枢纽组织工程'}
                   </span>

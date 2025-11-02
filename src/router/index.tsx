@@ -1,5 +1,6 @@
 import React from 'react'
 import {createBrowserRouter, Link} from 'react-router-dom'
+import HomePage from '../pages/HomePage'
 import HelloPage from '../pages/HelloPage'
 import GeoPointSearch from '../pages/GeoPoint/GeoPointSearch'
 import GeoPointSearchIntegrated from '../pages/GeoPoint/GeoPointSearchIntegrated'
@@ -15,24 +16,11 @@ import BusinessDataPage from '../pages/BusinessDataPage'
 const router = createBrowserRouter([
   {
     path: '/',
-    element: (
-    <div>
-      <h1>地质预报管理系统</h1>
-      <Link to="hello">主页面（隧道工点管理）</Link>
-      <br />
-      <Link to="geo-search">工点搜索（原版 - 硬编码Mock）</Link>
-      <br />
-      <Link to="geo-search-integrated">工点搜索（集成版 - 真实API）✨ 推荐</Link>
-      <br />
-      <Link to="forecast/design">预报设计管理</Link>
-      <br />
-      <Link to="api-test">🧪 API测试页面（测试新的请求工具）</Link>
-      <br />
-      <Link to="swagger-analyzer">📋 Swagger文档分析器</Link>
-      <br />
-      <Link to="business-data">💼 业务数据查询（标段/物探法/地震波）</Link>
-    </div>
-    )
+    element: <HomePage />
+  },
+  {
+    path: '/home',
+    element: <HomePage />
   },
   {
     path: '/about',

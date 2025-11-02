@@ -1,0 +1,28 @@
+/* HomePage 样式 */
+.home-page-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.home-page-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* 渐变卡片动画 */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-card {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
