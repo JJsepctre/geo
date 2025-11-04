@@ -145,13 +145,13 @@ class APIAdapter {
   }
 
   /**
-   * 获取工点的综合分析（综合分析Tab数据）
+   * 获取工点的综合结论（综合结论Tab数据）
    */
   async getWorkPointComprehensiveAnalysis(workPointId: string, params?: { page?: number; pageSize?: number }) {
     if (USE_REAL_API) {
       return realAPI.getWorkPointComprehensiveAnalysis(workPointId, params);
     } else {
-      // Mock实现：生成综合分析数据
+      // Mock实现：生成综合结论数据
       return this.generateMockComprehensiveAnalysis(workPointId, params);
     }
   }
@@ -318,7 +318,7 @@ class APIAdapter {
     // const page = params?.page || 1;  // 在真实分页场景中会使用
     const pageSize = params?.pageSize || 10;
     
-    // 生成综合分析Mock数据
+    // 生成综合结论Mock数据
     const total = Math.floor(Math.random() * 20) + 5;
     const list = [];
     

@@ -12,6 +12,7 @@ type ForecastRecord = {
   id: string
   createdAt: string
   method: string
+  rockGrade?: string      // 围岩等级（可选）
   mileagePrefix?: string  // 里程冠号（可选）
   startMileage: string
   endMileage: string
@@ -94,17 +95,12 @@ function ForecastDesignPage() {
     const startMileageSub = startMileageParts ? parseInt(startMileageParts[2]) : 0
     
     addForm.setFieldsValue({
-      method: record.method,
+      rockGrade: 'IV', // 默认围岩等级
       mileagePrefix: record.mileagePrefix || 'DK',
       startMileageMain,
       startMileageSub,
-      endMileage: record.endMileage,
       length: record.length,
-      minBurialDepth: record.minBurialDepth,
-      drillingCount: record.drillingCount || 0,
-      coreCount: record.coreCount || 0,
-      designTimes: record.designTimes,
-      author: record.author || '',
+      author: record.author || '一分部',
       modifyReason: record.modifyReason || '',
     })
     setEditVisible(true)
@@ -186,26 +182,27 @@ function ForecastDesignPage() {
     try {
       const values = await addForm.validate()
       // 合并开始里程的两个字段
-      const startMileage = `${values.startMileageMain}+${values.startMileageSub}`
+      const startMileage = `${values.mileagePrefix}${values.startMileageMain}+${values.startMileageSub}`
       const submitData = {
-        ...values,
+        id: editingRecord.id,
+        rockGrade: values.rockGrade,
+        mileagePrefix: values.mileagePrefix,
         startMileage,
-        id: editingRecord.id
+        length: values.length,
+        author: values.author,
+        modifyReason: values.modifyReason,
       }
-      // 移除临时字段
-      delete submitData.startMileageMain
-      delete submitData.startMileageSub
       
       // 这里应该调用更新API，暂时使用创建API
       await apiAdapter.createForecastDesign(submitData)
-      Message.success('编辑成功')
+      Message.success('修改成功')
       setEditVisible(false)
       setEditingRecord(null)
       addForm.resetFields()
       fetchList()
     } catch (error) {
-      console.error('编辑预报设计失败:', error)
-      Message.error('编辑失败')
+      console.error('修改设计围岩失败:', error)
+      Message.error('修改失败')
     }
   }
 
@@ -341,7 +338,7 @@ function ForecastDesignPage() {
       </Modal>
 
       <Modal
-        title="修改设计预报"
+        title="修改设计围岩"
         visible={editVisible}
         onOk={handleEditOk}
         onCancel={() => {
@@ -355,8 +352,15 @@ function ForecastDesignPage() {
         <Form form={addForm} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="预报方法" field="method" rules={[{ required: true, message: '请选择预报方法' }]}>
-                <Select placeholder="请选择" options={methodOptions} />
+              <Form.Item label="围岩等级" field="rockGrade" rules={[{ required: true, message: '请选择围岩等级' }]}>
+                <Select placeholder="请选择" options={[
+                  { label: 'I', value: 'I' },
+                  { label: 'II', value: 'II' },
+                  { label: 'III', value: 'III' },
+                  { label: 'IV', value: 'IV' },
+                  { label: 'V', value: 'V' },
+                  { label: 'VI', value: 'VI' }
+                ]} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -375,7 +379,7 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="718" style={{ width: '120px' }} />
+                    <InputNumber placeholder="713" style={{ width: '120px' }} />
                   </Form.Item>
                   <span style={{ margin: '0 8px' }}>+</span>
                   <Form.Item 
@@ -383,7 +387,7 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="594" style={{ width: '120px' }} />
+                    <InputNumber placeholder="485" style={{ width: '120px' }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
@@ -393,39 +397,15 @@ function ForecastDesignPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="预报长度" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
-                <InputNumber placeholder="-48.00" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="最小埋深" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
-                <InputNumber placeholder="86.06" min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="钻孔数量" field="drillingCount" rules={[{ required: true, message: '请输入钻孔数量' }]}>
-                <InputNumber placeholder="5" min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="取芯数量" field="coreCount" rules={[{ required: true, message: '请输入取芯数量' }]}>
-                <InputNumber placeholder="0" min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="设计次数" field="designTimes" rules={[{ required: true, message: '请输入设计次数' }]}>
-                <InputNumber placeholder="8" min={0} style={{ width: '100%' }} />
+                <InputNumber placeholder="-205.00" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="填写人" field="author" rules={[{ required: true, message: '请选择填写人' }]}>
-                <Select placeholder="谢叶晨" options={[
-                  { label: '谢叶晨', value: '谢叶晨' },
+                <Select placeholder="请选择" options={[
+                  { label: '一分部', value: '一分部' },
+                  { label: '二分部', value: '二分部' },
+                  { label: '三分部', value: '三分部' },
                   { label: '其他', value: '其他' }
                 ]} />
               </Form.Item>

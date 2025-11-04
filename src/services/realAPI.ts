@@ -792,7 +792,7 @@ class RealAPIService {
   }
 
   /**
-   * 获取工点的综合分析
+   * 获取工点的综合结论
    */
   async getWorkPointComprehensiveAnalysis(workPointId: string, params?: { page?: number; pageSize?: number }): Promise<{ list: ForecastDesignRecord[]; total: number }> {
     // 查询综合结论数据

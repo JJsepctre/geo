@@ -167,7 +167,7 @@ const GeoPointSearchIntegrated: React.FC = () => {
     switch (view) {
       case 'design': return '设计信息';
       case 'geology': return '地质预报';
-      case 'comprehensive': return '综合分析';
+      case 'comprehensive': return '综合结论';
     }
   };
 
@@ -258,7 +258,7 @@ const GeoPointSearchIntegrated: React.FC = () => {
                     type={getSelectedView(workPoint.id) === 'comprehensive' ? 'primary' : 'outline'}
                     onClick={() => setSelectedViewFor(workPoint.id, 'comprehensive')}
                   >
-                    综合分析
+                    综合结论
                   </Button>
                 </Space>
               </div>

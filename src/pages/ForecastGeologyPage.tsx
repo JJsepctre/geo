@@ -13,7 +13,9 @@ import {
   Dropdown,
   Typography,
   Message,
-  Spin
+  Spin,
+  Modal,
+  Upload
 } from '@arco-design/web-react'
 import { IconUser, IconDown } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
@@ -32,51 +34,173 @@ type GeologyForecastRecord = {
   uploadTip: string
 }
 
-// 表格列定义
-const columns = [
-  {
-    title: '预报方法',
-    dataIndex: 'method',
-    key: 'method',
-  },
-  {
-    title: '预报时间',
-    dataIndex: 'time',
-    key: 'time',
-  },
-  {
-    title: '掌子面里程',
-    dataIndex: 'mileage',
-    key: 'mileage',
-  },
-  {
-    title: '预报长度',
-    dataIndex: 'length',
-    key: 'length',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-  },
-  {
-    title: '上传提示',
-    dataIndex: 'uploadTip',
-    key: 'uploadTip',
-  },
-  {
-    title: '操作',
-    dataIndex: 'operation',
-    key: 'operation',
-    render: () => (
-      <Button type="text" size="small">
-        操作
-      </Button>
-    ),
-  },
-]
-
 function ForecastGeologyPage() {
+  // 详情弹窗状态
+  const [detailVisible, setDetailVisible] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState<GeologyForecastRecord | null>(null)
+  
+  // 上传弹窗状态
+  const [uploadVisible, setUploadVisible] = useState(false)
+  const [uploadingRecord, setUploadingRecord] = useState<GeologyForecastRecord | null>(null)
+
+  // 查看详情
+  const handleViewDetail = (record: GeologyForecastRecord) => {
+    setSelectedRecord(record)
+    setDetailVisible(true)
+    Message.info(`查看详情：${record.method}`)
+  }
+
+  // 修改
+  const handleEdit = (record: GeologyForecastRecord) => {
+    Message.info(`修改记录：${record.method} - ID: ${record.id}`)
+    // TODO: 跳转到编辑页面或打开编辑弹窗
+    // navigate(`/forecast/geology/edit/${record.id}`)
+  }
+
+  // 复制
+  const handleCopy = (record: GeologyForecastRecord) => {
+    Modal.confirm({
+      title: '确认复制',
+      content: `确定要复制这条预报记录"${record.method}"吗？`,
+      onOk: async () => {
+        try {
+          // TODO: 调用复制API
+          // await copyGeologyForecast(record.id)
+          Message.success('复制成功')
+          // TODO: 刷新列表
+          // fetchGeologyData()
+        } catch (error) {
+          Message.error('复制失败，请稍后重试')
+        }
+      }
+    })
+  }
+
+  // 上传
+  const handleUpload = (record: GeologyForecastRecord) => {
+    setUploadingRecord(record)
+    setUploadVisible(true)
+  }
+
+  // 删除
+  const handleDelete = (record: GeologyForecastRecord) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除这条预报记录"${record.method}"吗？此操作不可恢复。`,
+      okButtonProps: {
+        status: 'danger'
+      },
+      onOk: async () => {
+        try {
+          // TODO: 调用删除API
+          // await deleteGeologyForecast(record.id)
+          Message.success('删除成功')
+          // TODO: 刷新列表
+          // fetchGeologyData()
+        } catch (error) {
+          Message.error('删除失败，请稍后重试')
+        }
+      }
+    })
+  }
+
+  // 上传文件处理
+  const handleFileUpload = (fileList: any[]) => {
+    if (fileList.length > 0) {
+      Message.loading('正在上传...')
+      // TODO: 实现文件上传逻辑
+      setTimeout(() => {
+        Message.success('上传成功')
+        setUploadVisible(false)
+      }, 1000)
+    }
+  }
+
+  // 表格列定义
+  const columns = [
+    {
+      title: '预报方法',
+      dataIndex: 'method',
+      key: 'method',
+    },
+    {
+      title: '预报时间',
+      dataIndex: 'time',
+      key: 'time',
+    },
+    {
+      title: '掌子面里程',
+      dataIndex: 'mileage',
+      key: 'mileage',
+    },
+    {
+      title: '预报长度',
+      dataIndex: 'length',
+      key: 'length',
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+    },
+    {
+      title: '上传提示',
+      dataIndex: 'uploadTip',
+      key: 'uploadTip',
+    },
+    {
+      title: '操作',
+      dataIndex: 'operation',
+      key: 'operation',
+      width: 320,
+      fixed: 'right' as const,
+      render: (_: any, record: GeologyForecastRecord) => (
+        <Space size="small">
+          <Button 
+            type="text" 
+            size="small" 
+            style={{ color: '#165dff' }}
+            onClick={() => handleViewDetail(record)}
+          >
+            详情
+          </Button>
+          <Button 
+            type="text" 
+            size="small" 
+            style={{ color: '#165dff' }}
+            onClick={() => handleEdit(record)}
+          >
+            修改
+          </Button>
+          <Button 
+            type="text" 
+            size="small" 
+            style={{ color: '#165dff' }}
+            onClick={() => handleCopy(record)}
+          >
+            复制
+          </Button>
+          <Button 
+            type="text" 
+            size="small" 
+            style={{ color: '#00b42a' }}
+            onClick={() => handleUpload(record)}
+          >
+            上传
+          </Button>
+          <Button 
+            type="text" 
+            size="small" 
+            style={{ color: '#ff4d4f' }}
+            onClick={() => handleDelete(record)}
+          >
+            删除
+          </Button>
+        </Space>
+      ),
+    },
+  ]
+
   const [selectedMethod, setSelectedMethod] = useState('物探法')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<GeologyForecastRecord[]>([])
@@ -293,9 +417,122 @@ function ForecastGeologyPage() {
                 },
               }}
               noDataElement={<Empty description="暂无数据" />}
+              scroll={{ x: 1200 }}
             />
           </Spin>
         </Card>
+
+        {/* 详情查看弹窗 */}
+        <Modal
+          title="地质预报详情"
+          visible={detailVisible}
+          onOk={() => setDetailVisible(false)}
+          onCancel={() => setDetailVisible(false)}
+          style={{ width: 800 }}
+          okText="确定"
+          cancelText="取消"
+        >
+          {selectedRecord && (
+            <div style={{ padding: '20px 0' }}>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '24px',
+                fontSize: '14px'
+              }}>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>预报方法</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.method}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>预报时间</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.time}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>掌子面里程</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.mileage}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>预报长度</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.length}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>状态</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.status}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>上传提示</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.uploadTip}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#86909c', marginBottom: '8px' }}>记录ID</div>
+                  <div style={{ color: '#1d2129', fontWeight: 500 }}>{selectedRecord.id}</div>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #e5e6eb' }}>
+                <div style={{ color: '#86909c', marginBottom: '12px' }}>备注信息</div>
+                <div style={{ color: '#1d2129', lineHeight: 1.6 }}>
+                  暂无备注信息
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* 上传文件弹窗 */}
+        <Modal
+          title="上传文件"
+          visible={uploadVisible}
+          onOk={() => setUploadVisible(false)}
+          onCancel={() => setUploadVisible(false)}
+          style={{ width: 600 }}
+          okText="确定"
+          cancelText="取消"
+        >
+          {uploadingRecord && (
+            <div style={{ padding: '20px 0' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ color: '#86909c', marginBottom: '8px' }}>当前记录</div>
+                <div style={{ 
+                  padding: '12px 16px', 
+                  background: '#f7f8fa', 
+                  borderRadius: '6px',
+                  color: '#1d2129'
+                }}>
+                  <div><strong>预报方法：</strong>{uploadingRecord.method}</div>
+                  <div style={{ marginTop: '8px' }}><strong>掌子面里程：</strong>{uploadingRecord.mileage}</div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ color: '#86909c', marginBottom: '12px' }}>选择文件</div>
+                <Upload
+                  drag
+                  multiple
+                  onChange={(fileList) => {
+                    console.log('文件列表:', fileList)
+                  }}
+                  tip="支持格式：.xlsx, .xls, .pdf, .doc, .docx"
+                >
+                  <div style={{ 
+                    padding: '40px',
+                    textAlign: 'center',
+                    color: '#86909c'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📤</div>
+                    <div style={{ fontSize: '14px' }}>
+                      点击或拖拽文件到此区域上传
+                    </div>
+                    <div style={{ fontSize: '12px', marginTop: '8px', color: '#c9cdd4' }}>
+                      支持单个或批量上传
+                    </div>
+                  </div>
+                </Upload>
+              </div>
+            </div>
+          )}
+        </Modal>
       </Content>
     </Layout>
   )

@@ -58,7 +58,7 @@ const GeoPointSearchFinal: React.FC = () => {
   };
   // 菜单展开状态 - 使用openKeys控制
   const [openKeys, setOpenKeys] = useState<string[]>([]);
-  // 每个面板独立维护顶部三个视图按钮（设计信息/地质预报/综合分析）的选中状态
+  // 每个面板独立维护顶部三个视图按钮（设计信息/地质预报/综合结论）的选中状态
   type ViewName = 'design' | 'geology' | 'comprehensive';
   const [selectedViewMap, setSelectedViewMap] = useState<Record<string, ViewName>>({
     'main-tunnel': 'design',
@@ -179,7 +179,7 @@ const GeoPointSearchFinal: React.FC = () => {
                   type={getSelectedView('main-tunnel') === 'comprehensive' ? 'primary' : 'outline'}
                   onClick={() => setSelectedViewFor('main-tunnel', 'comprehensive')}
                 >
-                  综合分析
+                  综合结论
                 </Button>
               </Space>
             </div>
@@ -305,7 +305,7 @@ const GeoPointSearchFinal: React.FC = () => {
                   type={getSelectedView('tunnel-1') === 'comprehensive' ? 'primary' : 'outline'}
                   size="small"
                   onClick={() => setSelectedViewFor('tunnel-1', 'comprehensive')}
-                >综合分析</Button>
+                >综合结论</Button>
               </Space>
             </div>
 
@@ -427,7 +427,7 @@ const GeoPointSearchFinal: React.FC = () => {
                     type={getSelectedView('tunnel-2') === 'comprehensive' ? 'primary' : 'outline'}
                     size="small"
                     onClick={() => setSelectedViewFor('tunnel-2', 'comprehensive')}
-                  >综合分析</Button>
+                  >综合结论</Button>
               </Space>
             </div>
 

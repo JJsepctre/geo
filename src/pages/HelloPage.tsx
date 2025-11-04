@@ -764,12 +764,12 @@ function HelloPage() {
                             >
                               地质预报
                             </Button>
-                            <Button
+                            <Button 
                               type="primary"
                               size="large"
                               onClick={() => navigate('/forecast/comprehensive')}
                             >
-                              综合分析
+                              综合结论
                             </Button>
                           </Space>
                         </Card>

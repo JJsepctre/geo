@@ -448,19 +448,19 @@ function HomePage() {
         }}>
           <Tabs defaultActiveTab="1" type="line">
             <TabPane key="1" title="地震波反射">
-              <OperationSteps />
+              <OperationSteps type="地震波反射" />
             </TabPane>
             <TabPane key="2" title="电磁波反射">
-              <OperationSteps />
+              <OperationSteps type="电磁波反射" />
             </TabPane>
             <TabPane key="3" title="掌子面素描">
-              <OperationSteps />
+              <OperationSteps type="掌子面素描" />
             </TabPane>
             <TabPane key="4" title="加深炮孔">
-              <OperationSteps />
+              <OperationSteps type="加深炮孔" />
             </TabPane>
             <TabPane key="5" title="超前水平钻">
-              <OperationSteps />
+              <OperationSteps type="超前水平钻" />
             </TabPane>
           </Tabs>
         </div>
@@ -471,39 +471,172 @@ function HomePage() {
 }
 
 // 操作步骤组件
-function OperationSteps() {
-  const steps = [
-    {
-      number: '01',
-      title: '下载模板',
-      description: '在上述文件中选择地质预报模板下载所需要的文件。'
-    },
-    {
-      number: '02',
-      title: '更改表格',
-      description: '解压文件后选择电磁波反射模板，并更改模板内容为真实预报数据。'
-    },
-    {
-      number: '03',
-      title: '选择工点',
-      description: '点击顶部地质预报进入预报页面，标段查询搜索栏段，左侧选择隧道，右侧查找工点。'
-    },
-    {
-      number: '04',
-      title: '选择模块',
-      description: '每个工点中间选择地质预报按钮进入页面，在此页面中可上下载模板。'
-    },
-    {
-      number: '05',
-      title: '导入模板',
-      description: '在地质预报页面中，点击导入按钮，选择已填写好的模板文件进行上传。'
-    },
-    {
-      number: '06',
-      title: '添加文件',
-      description: '确认模板数据无误后，点击添加文件按钮，将预报数据保存到系统中。'
-    }
-  ];
+function OperationSteps({ type }: { type: string }) {
+  // 根据不同类型定义不同的步骤内容
+  const stepsConfig: Record<string, Array<{ number: string; title: string; description: string }>> = {
+    '地震波反射': [
+      {
+        number: '01',
+        title: '下载模板',
+        description: '在上述文件中选择地质预报模板，下载地震波反射所需要的文件。'
+      },
+      {
+        number: '02',
+        title: '更改表格',
+        description: '解压文件后选择地震波反射模板，并更改模板内容为真实预报数据。'
+      },
+      {
+        number: '03',
+        title: '选择工点',
+        description: '点击顶部地质预报进入预报页面，标段查询搜索栏段，左侧选择隧道，右侧查找工点。'
+      },
+      {
+        number: '04',
+        title: '选择模块',
+        description: '在工点页面中选择地震波反射按钮进入页面，在此页面中可上传数据模板。'
+      },
+      {
+        number: '05',
+        title: '导入模板',
+        description: '在地震波反射页面中，点击导入按钮，选择已填写好的地震波反射模板文件进行上传。'
+      },
+      {
+        number: '06',
+        title: '添加文件',
+        description: '确认地震波反射数据无误后，点击添加文件按钮，将预报数据保存到系统中。'
+      }
+    ],
+    '电磁波反射': [
+      {
+        number: '01',
+        title: '下载模板',
+        description: '在上述文件中选择地质预报模板，下载电磁波反射所需要的文件。'
+      },
+      {
+        number: '02',
+        title: '更改表格',
+        description: '解压文件后选择电磁波反射模板，并更改模板内容为真实预报数据。'
+      },
+      {
+        number: '03',
+        title: '选择工点',
+        description: '点击顶部地质预报进入预报页面，标段查询搜索栏段，左侧选择隧道，右侧查找工点。'
+      },
+      {
+        number: '04',
+        title: '选择模块',
+        description: '在工点页面中选择电磁波反射按钮进入页面，在此页面中可上传数据模板。'
+      },
+      {
+        number: '05',
+        title: '导入模板',
+        description: '在电磁波反射页面中，点击导入按钮，选择已填写好的电磁波反射模板文件进行上传。'
+      },
+      {
+        number: '06',
+        title: '添加文件',
+        description: '确认电磁波反射数据无误后，点击添加文件按钮，将预报数据保存到系统中。'
+      }
+    ],
+    '掌子面素描': [
+      {
+        number: '01',
+        title: '下载模板',
+        description: '在上述文件中选择地质预报模板，下载掌子面素描所需要的文件。'
+      },
+      {
+        number: '02',
+        title: '更改表格',
+        description: '解压文件后选择掌子面素描模板，并更改模板内容为真实素描数据。'
+      },
+      {
+        number: '03',
+        title: '选择工点',
+        description: '点击顶部地质预报进入预报页面，标段查询搜索栏段，左侧选择隧道，右侧查找工点。'
+      },
+      {
+        number: '04',
+        title: '选择模块',
+        description: '在工点页面中选择掌子面素描按钮进入页面，在此页面中可上传素描数据。'
+      },
+      {
+        number: '05',
+        title: '导入模板',
+        description: '在掌子面素描页面中，点击导入按钮，选择已填写好的掌子面素描模板文件进行上传。'
+      },
+      {
+        number: '06',
+        title: '添加文件',
+        description: '确认掌子面素描数据无误后，点击添加文件按钮，将素描数据保存到系统中。'
+      }
+    ],
+    '加深炮孔': [
+      {
+        number: '01',
+        title: '下载模板',
+        description: '在上述文件中选择地质预报模板，下载加深炮孔所需要的文件。'
+      },
+      {
+        number: '02',
+        title: '更改表格',
+        description: '解压文件后选择加深炮孔模板，并更改模板内容为真实炮孔数据。'
+      },
+      {
+        number: '03',
+        title: '选择工点',
+        description: '点击顶部地质预报进入预报页面，标段查询搜索栏段，左侧选择隧道，右侧查找工点。'
+      },
+      {
+        number: '04',
+        title: '选择模块',
+        description: '在工点页面中选择加深炮孔按钮进入页面，在此页面中可上传炮孔数据。'
+      },
+      {
+        number: '05',
+        title: '导入模板',
+        description: '在加深炮孔页面中，点击导入按钮，选择已填写好的加深炮孔模板文件进行上传。'
+      },
+      {
+        number: '06',
+        title: '添加文件',
+        description: '确认加深炮孔数据无误后，点击添加文件按钮，将炮孔数据保存到系统中。'
+      }
+    ],
+    '超前水平钻': [
+      {
+        number: '01',
+        title: '下载模板',
+        description: '在上述文件中选择地质预报模板，下载超前水平钻所需要的文件。'
+      },
+      {
+        number: '02',
+        title: '更改表格',
+        description: '解压文件后选择超前水平钻模板，并更改模板内容为真实钻孔数据。'
+      },
+      {
+        number: '03',
+        title: '选择工点',
+        description: '点击顶部地质预报进入预报页面，标段查询搜索栏段，左侧选择隧道，右侧查找工点。'
+      },
+      {
+        number: '04',
+        title: '选择模块',
+        description: '在工点页面中选择超前水平钻按钮进入页面，在此页面中可上传钻孔数据。'
+      },
+      {
+        number: '05',
+        title: '导入模板',
+        description: '在超前水平钻页面中，点击导入按钮，选择已填写好的超前水平钻模板文件进行上传。'
+      },
+      {
+        number: '06',
+        title: '添加文件',
+        description: '确认超前水平钻数据无误后，点击添加文件按钮，将钻孔数据保存到系统中。'
+      }
+    ]
+  };
+
+  const steps = stepsConfig[type] || stepsConfig['地震波反射'];
 
   return (
     <div style={{ 
@@ -580,14 +713,14 @@ function OperationSteps() {
           marginBottom: '16px'
         }}>
           <div style={{ fontSize: '18px', fontWeight: 600 }}>
-            操作演示视频
+            操作演示视频 - {type}
           </div>
           <div style={{ 
             fontSize: '13px', 
             opacity: 0.9,
             marginTop: '8px'
           }}>
-            了解完整的工作流程和操作步骤
+            了解{type}的完整工作流程和操作步骤
           </div>
         </div>
         
@@ -603,16 +736,17 @@ function OperationSteps() {
           justifyContent: 'center'
         }}>
           <video
+            key={type} // 添加key确保不同类型时重新加载视频
             controls
             style={{
               width: '100%',
               height: '100%',
               objectFit: 'contain'
             }}
-            poster="/videos/poster.jpg" // 视频封面图（可选）
+            poster={`/videos/${type}-poster.jpg`}
           >
-            <source src="/videos/operation-demo.mp4" type="video/mp4" />
-            <source src="/videos/operation-demo.webm" type="video/webm" />
+            <source src={`/videos/${type}-demo.mp4`} type="video/mp4" />
+            <source src={`/videos/${type}-demo.webm`} type="video/webm" />
             您的浏览器不支持视频播放
           </video>
         </div>
