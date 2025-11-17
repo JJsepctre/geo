@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, DatePicker, Form, Grid, Input, InputNumber, Message, Modal, Select, Space, Table } from '@arco-design/web-react'
-import { IconEdit, IconDelete } from '@arco-design/web-react/icon'
+import { Button, Card, DatePicker, Form, Grid, Input, InputNumber, Message, Modal, Select, Space, Table } from '@arco-design/web-react'
+import { IconDelete, IconEdit, IconLeft } from '@arco-design/web-react/icon'
+import { useNavigate } from 'react-router-dom'
 import apiAdapter from '../services/apiAdapter'
 
 type ForecastMethodOption = {
@@ -29,6 +30,7 @@ const { Row, Col } = Grid
 const RangePicker = DatePicker.RangePicker
 
 function ForecastDesignPage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ForecastRecord[]>([])
   const [total, setTotal] = useState(0)
@@ -90,17 +92,21 @@ function ForecastDesignPage() {
   const handleEdit = (record: ForecastRecord) => {
     setEditingRecord(record)
     // 解析开始里程（例如 "DK718+594" 或 "718+594"）
-    const startMileageParts = record.startMileage.match(/(\d+)\+(\d+)/)
+    const startMileageParts = record.startMileage.match(/(\d+)\+(\d+\.?\d*)/)
     const startMileageMain = startMileageParts ? parseInt(startMileageParts[1]) : 0
-    const startMileageSub = startMileageParts ? parseInt(startMileageParts[2]) : 0
+    const startMileageSub = startMileageParts ? parseFloat(startMileageParts[2]) : 0
     
     addForm.setFieldsValue({
-      rockGrade: 'IV', // 默认围岩等级
+      method: record.method,
       mileagePrefix: record.mileagePrefix || 'DK',
       startMileageMain,
       startMileageSub,
       length: record.length,
-      author: record.author || '一分部',
+      minBurialDepth: record.minBurialDepth,
+      drillingCount: record.drillingCount || 1,
+      coreCount: record.coreCount || 0,
+      designTimes: record.designTimes || 1,
+      author: record.author || '冯文波',
       modifyReason: record.modifyReason || '',
     })
     setEditVisible(true)
@@ -140,6 +146,22 @@ function ForecastDesignPage() {
         }
       },
     })
+  }
+
+  const handleDownloadTemplate = () => {
+    // 下载空白模板文件
+    // 如果后端提供了模板文件，直接下载；否则提示用户
+    const templateUrl = '/templates/设计预报导入模板.xlsx'
+    
+    // 尝试下载模板
+    const link = document.createElement('a')
+    link.href = templateUrl
+    link.download = '设计预报导入模板.xlsx'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    Message.info('正在下载模板文件...')
   }
 
   const openImport = () => {
@@ -183,25 +205,31 @@ function ForecastDesignPage() {
       const values = await addForm.validate()
       // 合并开始里程的两个字段
       const startMileage = `${values.mileagePrefix}${values.startMileageMain}+${values.startMileageSub}`
+      const endMileage = `${values.mileagePrefix}${values.startMileageMain}+${parseFloat(values.startMileageSub) + values.length}`
+      
       const submitData = {
-        id: editingRecord.id,
-        rockGrade: values.rockGrade,
+        method: values.method,
         mileagePrefix: values.mileagePrefix,
         startMileage,
+        endMileage,
         length: values.length,
+        minBurialDepth: values.minBurialDepth,
+        drillingCount: values.drillingCount,
+        coreCount: values.coreCount,
+        designTimes: values.designTimes,
         author: values.author,
         modifyReason: values.modifyReason,
       }
       
-      // 这里应该调用更新API，暂时使用创建API
-      await apiAdapter.createForecastDesign(submitData)
+      // 调用更新API
+      await apiAdapter.updateForecastDesign(editingRecord.id, submitData)
       Message.success('修改成功')
       setEditVisible(false)
       setEditingRecord(null)
       addForm.resetFields()
       fetchList()
     } catch (error) {
-      console.error('修改设计围岩失败:', error)
+      console.error('修改设计预报失败:', error)
       Message.error('修改失败')
     }
   }
@@ -242,33 +270,54 @@ function ForecastDesignPage() {
 
   return (
     <div>
-      
+      {/* 顶部信息栏 */}
+      <div style={{ 
+        height: 44, 
+        background: 'linear-gradient(90deg, #A18AFF 0%, #8B7AE6 100%)', 
+        borderRadius: 6, 
+        marginBottom: 12, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        padding: '0 16px', 
+        color: '#fff', 
+        fontSize: '14px'
+      }}>
+        <span>设计预报 / 人员信息 / 地质点/DK713+920/DK713+920/设计预报方法</span>
+        <Button 
+          type="text" 
+          icon={<IconLeft />} 
+          style={{ color: '#fff' }}
+          onClick={() => navigate('/hello')}
+        >
+          返回
+        </Button>
+      </div>
 
-      <Form form={form} layout="vertical" onSubmit={fetchList} style={{ marginBottom: 12 }}>
-        <Row gutter={16}>
-          <Col span={6}>
-            <Form.Item label="预报方法" field="method">
-              <Select placeholder="请选择" allowClear options={methodOptions} />
-            </Form.Item>
-          </Col>
-          <Col span={10}>
-            <Form.Item label="创建时间" field="createdAt">
-              <RangePicker style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={8} style={{ display: 'flex', alignItems: 'flex-start' }}>
-            <Form.Item label=" " colon={false} style={{ marginTop: 20, marginBottom: 0 }}>
-              <Space>
-                <Button type="primary" onClick={fetchList}>
-                  查询
-                </Button>
-                <Button onClick={() => { form.resetFields(); setPage(1); fetchList() }}>重置</Button>
-              </Space>
-            </Form.Item>
-          </Col>
-        </Row>
-        <Space style={{ marginBottom: 12 }}>
-          <Button onClick={() => Message.info('请联系后端提供模板下载地址')}>下载模板</Button>
+      {/* 筛选条件 */}
+      <Card style={{ marginBottom: '16px' }}>
+        <Form form={form} layout="inline">
+          <Form.Item label="预报方法" field="method" style={{ marginRight: 24 }}>
+            <Select placeholder="请选择预报方法" allowClear options={methodOptions} style={{ width: 180 }} />
+          </Form.Item>
+          <Form.Item label="创建时间" field="createdAt" style={{ marginRight: 24 }}>
+            <RangePicker format="YYYY-MM-DD" style={{ width: 280 }} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" icon={<span>🔍</span>} onClick={fetchList}>
+                查询
+              </Button>
+              <Button onClick={() => { form.resetFields(); setPage(1); fetchList() }}>重置</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      {/* 操作按钮 */}
+      <Card style={{ marginBottom: '16px' }}>
+        <Space>
+          <Button onClick={handleDownloadTemplate}>下载模板</Button>
           <Button onClick={openImport}>导入</Button>
           <input
             ref={fileInputRef}
@@ -277,11 +326,13 @@ function ForecastDesignPage() {
             style={{ display: 'none' }}
             onChange={handleImportFileChange}
           />
-          <Button type="primary" onClick={() => setAddVisible(true)}>新增</Button>
+          <Button type="primary" onClick={() => setAddVisible(true)}>生成预报</Button>
           <Button status="danger" disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete}>批量删除</Button>
         </Space>
-      </Form>
+      </Card>
 
+      {/* 数据表格 */}
+      <Card>
       <Table
         rowKey="id"
         loading={loading}
@@ -304,6 +355,7 @@ function ForecastDesignPage() {
         }}
         noDataElement={<div style={{ padding: 48, color: '#999' }}>暂无数据</div>}
       />
+      </Card>
 
       <Modal
         title="新增预报"
@@ -338,7 +390,7 @@ function ForecastDesignPage() {
       </Modal>
 
       <Modal
-        title="修改设计围岩"
+        title="修改设计预报"
         visible={editVisible}
         onOk={handleEditOk}
         onCancel={() => {
@@ -350,28 +402,19 @@ function ForecastDesignPage() {
         unmountOnExit
       >
         <Form form={addForm} layout="vertical">
+          {/* 预报方法 */}
+          <Form.Item label="预报方法" field="method" rules={[{ required: true, message: '请选择预报方法' }]}>
+            <Select placeholder="请选择预报方法" options={methodOptions} />
+          </Form.Item>
+
+          {/* 里程冠号 和 开始里程 */}
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="围岩等级" field="rockGrade" rules={[{ required: true, message: '请选择围岩等级' }]}>
-                <Select placeholder="请选择" options={[
-                  { label: 'I', value: 'I' },
-                  { label: 'II', value: 'II' },
-                  { label: 'III', value: 'III' },
-                  { label: 'IV', value: 'IV' },
-                  { label: 'V', value: 'V' },
-                  { label: 'VI', value: 'VI' }
-                ]} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="里程冠号" field="mileagePrefix" rules={[{ required: true, message: '请输入里程冠号' }]}>
+            <Col span={8}>
+              <Form.Item label="里程冠号" field="mileagePrefix" rules={[{ required: true, message: '请输入里程冠号' }]} initialValue="DK">
                 <Input placeholder="DK" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
+            <Col span={16}>
               <Form.Item label="开始里程" required>
                 <Space style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                   <Form.Item 
@@ -379,7 +422,7 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="713" style={{ width: '120px' }} />
+                    <InputNumber placeholder="713" min={0} style={{ width: '140px' }} />
                   </Form.Item>
                   <span style={{ margin: '0 8px' }}>+</span>
                   <Form.Item 
@@ -387,32 +430,62 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="485" style={{ width: '120px' }} />
+                    <InputNumber placeholder="973.2" min={0} max={999.9} step={0.1} style={{ width: '140px' }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
             </Col>
           </Row>
 
+          {/* 预报长度 和 最小埋深 */}
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="预报长度" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
-                <InputNumber placeholder="-205.00" style={{ width: '100%' }} />
+                <InputNumber placeholder="-23.20" style={{ width: '100%' }} step={0.01} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="最小埋深" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
+                <InputNumber placeholder="2.00" min={0} style={{ width: '100%' }} step={0.01} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 钻孔数量 和 取芯数量 */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="钻孔数量" field="drillingCount" rules={[{ required: true, message: '请输入钻孔数量' }]} initialValue={1}>
+                <InputNumber placeholder="1" min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="取芯数量" field="coreCount" rules={[{ required: true, message: '请输入取芯数量' }]} initialValue={0}>
+                <InputNumber placeholder="0" min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 设计次数 和 填写人 */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="设计次数" field="designTimes" rules={[{ required: true, message: '请输入设计次数' }]} initialValue={1}>
+                <InputNumber placeholder="1" min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="填写人" field="author" rules={[{ required: true, message: '请选择填写人' }]}>
-                <Select placeholder="请选择" options={[
+                <Select placeholder="请选择填写人" options={[
+                  { label: '冯文波', value: '冯文波' },
                   { label: '一分部', value: '一分部' },
                   { label: '二分部', value: '二分部' },
-                  { label: '三分部', value: '三分部' },
-                  { label: '其他', value: '其他' }
+                  { label: '三分部', value: '三分部' }
                 ]} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item label="修改原因说明" field="modifyReason" rules={[{ required: true, message: '请输入修改原因说明' }]}>
+          {/* 修改原因说明 */}
+          <Form.Item label="修改原因说明" field="modifyReason">
             <Input.TextArea placeholder="请输入修改原因" rows={3} />
           </Form.Item>
         </Form>

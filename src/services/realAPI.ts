@@ -27,41 +27,162 @@ export interface PageResponse<T = any> {
 
 // ==================== 请求数据类型定义 ====================
 
-// 设计围岩等级请求类型
+// 设计围岩等级请求类型（包装在sjwydj对象中）
 export interface DesignRockGradeRequest {
-  sitePk: number;        // 工点主键
-  dkname: string;        // 里程冠号
-  dkilo: number;         // 里程公里数
-  sjwydjLength: number;  // 预报长度
-  wydj: number;          // 围岩等级 (1-6)
-  revise?: string;       // 修改原因
-  username: string;      // 填写人
+  sjwydj: {
+    siteId: string;        // 工点ID
+    dkname: string;        // 里程冠号
+    dkilo: number;         // 里程公里数
+    sjwydjLength: number;  // 预报长度
+    wydj: number;          // 围岩等级 (1-6)
+    revise?: string;       // 修改原因
+    username: string;      // 填写人账号
+  };
 }
 
-// 设计预报方法请求类型
-export interface DesignForecastRequest {
-  sitePk: number;        // 工点主键
-  method: number;        // 预报方法代码
-  dkname: string;        // 里程冠号
-  dkilo: number;         // 起点里程
-  sjybLength: number;    // 预报长度
-  zxms?: number;         // 最小埋深
-  plannum?: number;      // 设计次数
-  plantime?: string;     // 计划时间
+// 设计预报方法创建请求类型 (SjybCreateDTO)
+export interface DesignForecastCreateRequest {
+  bdPk: number;          // 标段主键 (必填)
+  sdPk: number;          // 隧道主键 (必填)
+  method: number;        // 预报方法代码 (必填, 0-99)
+  dkname: string;        // 里程冠号 (必填)
+  dkilo: number;         // 起始里程 (必填, int32)
+  endMileage: number;    // 结束里程 (必填, double)
+  sjybLength: number;    // 预报长度 (必填, double)
+  zxms: number;          // 最小埋深 (必填, >=0)
+  zksl: number;          // 钻孔数量 (必填, >=0)
+  qxsl: number;          // 取芯数量 (必填, >=0)
+  plannum: number;       // 设计次数 (必填, >=1)
+  username: string;      // 填写人账号 (必填)
 }
 
-// 设计地质信息请求类型
+// 设计预报方法更新请求类型 (SjybUpdateDTO)
+export interface DesignForecastUpdateRequest {
+  bdPk: number;          // 标段主键 (必填)
+  sdPk: number;          // 隧道主键 (必填)
+  method: number;        // 预报方法代码 (必填, 0-99)
+  dkname: string;        // 里程冠号 (必填)
+  dkilo: number;         // 起始里程 (必填, int32)
+  endMileage: number;    // 结束里程 (必填, double)
+  sjybLength: number;    // 预报长度 (必填, double)
+  zxms: number;          // 最小埋深 (必填, >=0)
+  zksl: number;          // 钻孔数量 (必填, >=0)
+  qxsl: number;          // 取芯数量 (必填, >=0)
+  plannum: number;       // 设计次数 (必填, >=1)
+  username: string;      // 填写人账号 (必填)
+  revise: string;        // 修改原因说明 (必填)
+}
+
+// 设计地质信息请求类型（包装在sjdz对象中）
 export interface DesignGeologyRequest {
-  sitePk: number;        // 工点主键
-  method: number;        // 方法代码
-  dkname: string;        // 里程冠号
-  dkilo: number;         // 起点里程
-  sjdzLength: number;    // 长度
-  revise?: string;       // 修改原因
-  username: string;      // 填写人
+  sjdz: {
+    siteId: number;        // 工点ID
+    method: number;        // 方法代码
+    dkname: string;        // 里程冠号
+    dkilo: number;         // 起点里程
+    sjdzLength: number;    // 长度
+    dzxxfj?: number;       // 地质信息附加
+    revise?: string;       // 修改原因
+    username: string;      // 填写人账号
+  };
 }
 
-// 物探法请求类型
+// ==================== 认证相关请求类型 ====================
+
+// 登录请求类型
+export interface LoginRequest {
+  login: string;         // 用户名 (必填)
+  password: string;      // 密码 (必填)
+}
+
+// 重置密码请求类型
+export interface ResetPasswordRequest {
+  userPk?: number;       // 用户主键
+  newPassword: string;   // 新密码 (必填, 6-20字符)
+}
+
+// 修改密码请求类型
+export interface ChangePasswordRequest {
+  oldPassword: string;   // 旧密码 (必填)
+  newPassword: string;   // 新密码 (必填, 6-20字符)
+}
+
+// ==================== 物探法相关请求类型 ====================
+
+// TSP地震波反射DTO (TspDTO) - 用于multipart/form-data
+export interface TspDTO {
+  // 基础预报信息
+  ybPk?: number;
+  ybId?: number;
+  siteId?: string;
+  dkname?: string;
+  dkilo?: number;
+  ybLength?: number;
+  monitordate?: string;
+  createdate?: string;
+  
+  // 人员信息
+  testname?: string;
+  testno?: string;
+  testtel?: string;
+  monitorname?: string;
+  monitorno?: string;
+  monitortel?: string;
+  supervisorname?: string;
+  supervisorno?: string;
+  supervisortel?: string;
+  
+  // 结论信息
+  conclusionyb?: string;
+  suggestion?: string;
+  solution?: string;
+  remark?: string;
+  method?: number;
+  flag?: number;
+  submitFlag?: number;
+  
+  // TSP特有字段
+  tspPk?: number;
+  tspId?: string;
+  jfpknum?: number;
+  jfpksd?: number;
+  jfpkzj?: number;
+  jfpkjdmgd?: number;
+  jfpkjj?: number;
+  jspknum?: number;
+  jspksd?: number;
+  jspkzj?: number;
+  jspkjdmgd?: number;
+  sbName?: string;
+  kwwz?: number;
+  leftkilo?: number;
+  rightkilo?: number;
+  leftjgdczjl?: number;
+  rightjgdczjl?: number;
+  leftzxjl?: number;
+  rightzxjl?: number;
+  leftjdmgd?: number;
+  rightjdmgd?: number;
+  leftks?: number;
+  rightks?: number;
+  leftqj?: number;
+  rightqj?: number;
+  
+  // 图片文件 (binary)
+  pic1?: File | string;
+  pic2?: File | string;
+  pic3?: File | string;
+  pic4?: File | string;
+  pic5?: File | string;
+  pic6?: File | string;
+  
+  // 关联数据列表
+  ybjgDTOList?: any[];
+  tspBxdataDTOList?: any[];
+  tspPddataDTOList?: any[];
+}
+
+// 物探法请求类型（通用）
 export interface GeophysicalRequest {
   sitePk: number;        // 工点主键
   method: number;        // 方法代码 (1:TSP; 2:HSP; 3:陆地声呐; 4:电磁波反射; 5:高分辨直流电; 6:瞬变电磁; 9:微震监测; 0:其他)
@@ -385,6 +506,13 @@ export interface GeoPointDetectionData {
 class RealAPIService {
   private readonly userId = 1; // 默认用户ID，实际应该从登录状态获取
 
+  /**
+   * 获取当前登录用户名
+   */
+  private getCurrentLogin(): string {
+    return localStorage.getItem('login') || 'admin';
+  }
+
   // ========== 标段管理 ==========
   
   /**
@@ -645,55 +773,6 @@ class RealAPIService {
 
   // ========== 洞身素描 ==========
   
-  /**
-   * 获取洞身素描数据列表
-   * @param params 查询参数
-   * @returns 洞身素描数据列表（分页）
-   */
-  async getTunnelSketchList(params: {
-    userid?: number;
-    pageNum?: number;
-    pageSize?: number;
-    begin?: string;
-    end?: string;
-  }): Promise<any> {
-    return get<any>(`/api/dssm/list`, { params: { userid: this.userId, ...params } });
-  }
-
-  /**
-   * 获取洞身素描详情
-   * @param dssmPk 洞身素描主键
-   * @returns 洞身素描详细信息
-   */
-  async getTunnelSketchDetail(dssmPk: number): Promise<any> {
-    return get<any>(`/api/dssm/${dssmPk}`);
-  }
-
-  // ========== 地表补充 ==========
-  
-  /**
-   * 获取地表补充数据列表
-   * @param params 查询参数
-   * @returns 地表补充数据列表（分页）
-   */
-  async getSurfaceSupplementList(params: {
-    userid?: number;
-    pageNum?: number;
-    pageSize?: number;
-    begin?: string;
-    end?: string;
-  }): Promise<any> {
-    return get<any>(`/api/dbbc/list`, { params: { userid: this.userId, ...params } });
-  }
-
-  /**
-   * 获取地表补充详情
-   * @param dbbcPk 地表补充主键
-   * @returns 地表补充详细信息
-   */
-  async getSurfaceSupplementDetail(dbbcPk: number): Promise<any> {
-    return get<any>(`/api/dbbc/${dbbcPk}`);
-  }
 
   // ========== 综合结论 ==========
   
@@ -1099,15 +1178,19 @@ class RealAPIService {
   async createForecastDesign(data: Omit<ForecastDesignRecord, 'id' | 'createdAt'>): Promise<{ success: boolean }> {
     try {
       // 转换前端数据格式为后端格式
-      const requestData: DesignForecastRequest = {
-        sitePk: 1, // 默认工点，实际应该从参数传入
+      const requestData: DesignForecastCreateRequest = {
+        bdPk: 1,  // 标段主键，实际应从参数获取
+        sdPk: 1,  // 隧道主键，实际应从参数获取
         method: this.getMethodCode(data.method),
         dkname: this.extractMileagePrefix(data.startMileage),
         dkilo: this.extractMileageNumber(data.startMileage),
+        endMileage: this.extractMileageNumber(data.endMileage),
         sjybLength: data.length,
-        zxms: data.minBurialDepth,
-        plannum: data.designTimes,
-        plantime: new Date().toISOString()
+        zxms: data.minBurialDepth || 0,
+        zksl: 7,  // 钻孔数量，默认值
+        qxsl: 9,  // 取芯数量，默认值
+        plannum: data.designTimes || 1,
+        username: this.getCurrentLogin()
       };
 
       const response = await post<BaseResponse>('/api/v1/sjyb', requestData);
@@ -1127,15 +1210,20 @@ class RealAPIService {
 
   async updateForecastDesign(id: string, data: Omit<ForecastDesignRecord, 'id' | 'createdAt'>): Promise<{ success: boolean }> {
     try {
-      const requestData: DesignForecastRequest = {
-        sitePk: 1,
+      const requestData: DesignForecastUpdateRequest = {
+        bdPk: 1,
+        sdPk: 1,
         method: this.getMethodCode(data.method),
         dkname: this.extractMileagePrefix(data.startMileage),
         dkilo: this.extractMileageNumber(data.startMileage),
+        endMileage: this.extractMileageNumber(data.endMileage),
         sjybLength: data.length,
-        zxms: data.minBurialDepth,
-        plannum: data.designTimes,
-        plantime: new Date().toISOString()
+        zxms: data.minBurialDepth || 0,
+        zksl: 7,
+        qxsl: 9,
+        plannum: data.designTimes || 1,
+        username: this.getCurrentLogin(),
+        revise: '更新数据'  // 修改原因，实际应从参数传入
       };
 
       const response = await put<BaseResponse>(`/api/v1/sjyb/${id}`, requestData);
@@ -1242,9 +1330,14 @@ class RealAPIService {
 
   /**
    * 创建设计围岩等级
+   * @param data 设计围岩等级数据，包含 sjwydj 对象
    */
   async createDesignRockGrade(data: DesignRockGradeRequest): Promise<{ success: boolean }> {
     try {
+      // 确保 username 字段存在
+      if (data.sjwydj && !data.sjwydj.username) {
+        data.sjwydj.username = this.getCurrentLogin();
+      }
       const response = await post<BaseResponse>('/api/v1/sjwydj', data);
       
       if (response.resultcode === 200) {
@@ -1324,9 +1417,14 @@ class RealAPIService {
 
   /**
    * 创建设计地质信息
+   * @param data 设计地质信息数据，包含 sjdz 对象
    */
   async createDesignGeology(data: DesignGeologyRequest): Promise<{ success: boolean }> {
     try {
+      // 确保 username 字段存在
+      if (data.sjdz && !data.sjdz.username) {
+        data.sjdz.username = this.getCurrentLogin();
+      }
       const response = await post<BaseResponse>('/api/v1/sjdz', data);
       
       if (response.resultcode === 200) {
@@ -1866,6 +1964,161 @@ class RealAPIService {
       6: 'VI'
     };
     return gradeMap[grade] || 'IV';
+  }
+
+  // ========== 五种预报方法 ==========
+
+  /**
+   * 获取物探法列表
+   */
+  async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+    try {
+      const response = await get<any>('/api/v1/wtf/list', {
+        params: {
+          'queryDTO.pageNum': params.pageNum,
+          'queryDTO.pageSize': params.pageSize,
+          'queryDTO.siteId': params.siteId || '1',
+          'queryDTO.type': 1,  // 预报类型：物探法
+          'queryDTO.submitFlag': 1  // 提交标志：已提交
+        }
+      });
+      
+      console.log('🔍 [realAPI] getGeophysicalList 响应:', response);
+      
+      if (response.resultcode === 200 && response.data) {
+        const pageData = response.data;
+        return {
+          records: pageData.records || [],
+          total: pageData.total || 0,
+          current: pageData.current || 1,
+          size: pageData.size || 10,
+          pages: pageData.pages || 1
+        };
+      }
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    } catch (error) {
+      console.error('❌ [realAPI] getGeophysicalList 异常:', error);
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    }
+  }
+
+  /**
+   * 获取掌子面素描列表
+   */
+  async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+    try {
+      const response = await get<any>('/api/v1/zzmsm/list', {
+        params: {
+          'queryDTO.pageNum': params.pageNum,
+          'queryDTO.pageSize': params.pageSize,
+          'queryDTO.siteId': params.siteId || '1',
+          'queryDTO.type': 2,  // 预报类型：掌子面素描
+          'queryDTO.submitFlag': 1
+        }
+      });
+      
+      console.log('🔍 [realAPI] getPalmSketchList 响应:', response);
+      
+      if (response.resultcode === 200 && response.data) {
+        const pageData = response.data;
+        return {
+          records: pageData.records || [],
+          total: pageData.total || 0,
+          current: pageData.current || 1,
+          size: pageData.size || 10,
+          pages: pageData.pages || 1
+        };
+      }
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    } catch (error) {
+      console.error('❌ [realAPI] getPalmSketchList 异常:', error);
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    }
+  }
+
+  /**
+   * 获取洞身素描列表
+   */
+  async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+    try {
+      const response = await get<any>('/api/v1/dssm/list', {
+        params: {
+          'queryDTO.pageNum': params.pageNum,
+          'queryDTO.pageSize': params.pageSize,
+          'queryDTO.siteId': params.siteId || '1',
+          'queryDTO.type': 3,  // 预报类型：洞身素描
+          'queryDTO.submitFlag': 1
+        }
+      });
+      
+      console.log('🔍 [realAPI] getTunnelSketchList 响应:', response);
+      
+      if (response.resultcode === 200 && response.data) {
+        const pageData = response.data;
+        return {
+          records: pageData.records || [],
+          total: pageData.total || 0,
+          current: pageData.current || 1,
+          size: pageData.size || 10,
+          pages: pageData.pages || 1
+        };
+      }
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    } catch (error) {
+      console.error('❌ [realAPI] getTunnelSketchList 异常:', error);
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    }
+  }
+
+  /**
+   * 获取钻探法列表
+   */
+  async getDrillingList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+    try {
+      const response = await get<any>('/api/v1/ztf/list', {
+        params: {
+          'queryDTO.pageNum': params.pageNum,
+          'queryDTO.pageSize': params.pageSize,
+          'queryDTO.siteId': params.siteId || '1',
+          'queryDTO.type': 4,  // 预报类型：钻探法
+          'queryDTO.submitFlag': 1
+        }
+      });
+      
+      console.log('🔍 [realAPI] getDrillingList 响应:', response);
+      
+      if (response.resultcode === 200 && response.data) {
+        const pageData = response.data;
+        return {
+          records: pageData.records || [],
+          total: pageData.total || 0,
+          current: pageData.current || 1,
+          size: pageData.size || 10,
+          pages: pageData.pages || 1
+        };
+      }
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    } catch (error) {
+      console.error('❌ [realAPI] getDrillingList 异常:', error);
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    }
+  }
+
+  /**
+   * 获取地表补充信息
+   */
+  async getSurfaceSupplementInfo(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/dbbc/${ybPk}`);
+      
+      if (response.resultcode === 200) {
+        return response.data || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getSurfaceSupplementInfo 异常:', error);
+      return null;
+    }
   }
 }
 

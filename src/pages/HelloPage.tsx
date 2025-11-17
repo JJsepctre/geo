@@ -14,7 +14,9 @@ import {
   Message,
   Empty,
   Select,
-  Collapse
+  Collapse,
+  Tabs,
+  Table
 } from '@arco-design/web-react';
 import { IconSearch, IconUser, IconDown, IconFile, IconRight } from '@arco-design/web-react/icon';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
@@ -26,6 +28,7 @@ const { Header, Sider, Content } = Layout;
 const { Search } = Input;
 const { Text } = Typography;
 const CollapseItem = Collapse.Item;
+const TabPane = Tabs.TabPane;
 
 function HelloPage() {
   const navigate = useNavigate();
@@ -53,6 +56,14 @@ function HelloPage() {
   const [selectedWorkPoint, setSelectedWorkPoint] = useState<WorkPoint | null>(null);
   const [detectionData, setDetectionData] = useState<any>(null);
   const [loadingDetection, setLoadingDetection] = useState(false);
+
+  // 五种预报方法数据状态
+  const [geophysicalData, setGeophysicalData] = useState<any[]>([]);
+  const [palmSketchData, setPalmSketchData] = useState<any[]>([]);
+  const [tunnelSketchData, setTunnelSketchData] = useState<any[]>([]);
+  const [drillingData, setDrillingData] = useState<any[]>([]);
+  const [surfaceData, setSurfaceData] = useState<any>(null);
+  const [loadingForecastMethods, setLoadingForecastMethods] = useState(false);
 
   // 统计数据状态
   const [statistics, setStatistics] = useState({
@@ -82,13 +93,52 @@ function HelloPage() {
     }
   }, []);
 
+  // 加载五种预报方法数据
+  const loadForecastMethodsData = useCallback(async (workPointId: string) => {
+    console.log('🔄 开始加载预报方法数据，工点ID:', workPointId);
+    setLoadingForecastMethods(true);
+    try {
+      // 并行加载五种预报方法的数据
+      const [geophysical, palmSketch, tunnelSketch, drilling] = await Promise.all([
+        apiAdapter.getGeophysicalList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
+        apiAdapter.getPalmSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
+        apiAdapter.getTunnelSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
+        apiAdapter.getDrillingList({ pageNum: 1, pageSize: 10, siteId: workPointId })
+      ]);
+
+      console.log('📊 预报方法数据加载完成:', {
+        物探法: geophysical.records?.length || 0,
+        掌子面素描: palmSketch.records?.length || 0,
+        洞身素描: tunnelSketch.records?.length || 0,
+        钻探法: drilling.records?.length || 0
+      });
+
+      setGeophysicalData(geophysical.records || []);
+      setPalmSketchData(palmSketch.records || []);
+      setTunnelSketchData(tunnelSketch.records || []);
+      setDrillingData(drilling.records || []);
+
+      // 地表补充数据需要ybPk，暂时不加载
+      // const surface = await apiAdapter.getSurfaceSupplementInfo(ybPk);
+      // setSurfaceData(surface);
+    } catch (error) {
+      console.error('❌ 加载预报方法数据失败:', error);
+      Message.error('加载预报方法数据失败');
+    } finally {
+      setLoadingForecastMethods(false);
+    }
+  }, []);
+
   // 打开工点详情（展开折叠面板时）
   const handleOpenWorkPointDetail = useCallback((workPoint: WorkPoint) => {
     setSelectedWorkPoint(workPoint);
     
     // 加载探测数据
     loadWorkPointDetectionData(workPoint.id);
-  }, [loadWorkPointDetectionData]);
+    
+    // 加载五种预报方法数据
+    loadForecastMethodsData(workPoint.id);
+  }, [loadWorkPointDetectionData, loadForecastMethodsData]);
 
   // 计算统计数据
   const calculateStatistics = useCallback(async () => {
@@ -602,7 +652,7 @@ function HelloPage() {
                 value={workPointSearchKeyword}
                 onChange={(value) => handleWorkPointSearch(value)}
                 allowClear
-                suffix={<IconSearch />}
+                prefix={<IconSearch />}
               />
               <Select
                 placeholder="工点类型"
@@ -715,22 +765,9 @@ function HelloPage() {
                         </div>
                       }
                       name={item.id}
-                      extra={
-                        <Button 
-                          type="primary" 
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('查顶按钮点击:', item.name);
-                          }}
-                          style={{ marginLeft: '12px' }}
-                        >
-                          查顶
-                        </Button>
-                      }
                       destroyOnHide
                     >
-                      {/* 工点详细内容 - 移除条件判断，让每个工点都能显示 */}
+                      {/* 工点详细内容 */}
                       <div style={{ padding: '20px' }}>
                         {/* 探测信息图表 */}
                         <Card 
@@ -747,8 +784,112 @@ function HelloPage() {
                           </Spin>
                         </Card>
 
+                        {/* 五种预报方法选项卡 */}
+                        <Card bodyStyle={{ padding: 0 }}>
+                          <Spin loading={loadingForecastMethods}>
+                            <Tabs defaultActiveTab="geophysical" type="card-gutter">
+                              <TabPane key="geophysical" title={`物探法 (${geophysicalData.length})`}>
+                                <div style={{ padding: '24px' }}>
+                                  {geophysicalData.length > 0 ? (
+                                    <Table
+                                      columns={[
+                                        { title: 'ID', dataIndex: 'wtfPk', width: 80 },
+                                        { title: '方法', dataIndex: 'methodName', width: 120, render: (text, record) => text || record.method },
+                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
+                                        { title: '长度(m)', dataIndex: 'wtfLength', width: 100 },
+                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
+                                        { title: '备注', dataIndex: 'addition' }
+                                      ]}
+                                      data={geophysicalData}
+                                      pagination={false}
+                                      rowKey="wtfPk"
+                                    />
+                                  ) : (
+                                    <Empty description="暂无物探法数据" />
+                                  )}
+                                </div>
+                              </TabPane>
+                              <TabPane key="palm-sketch" title={`掌子面素描 (${palmSketchData.length})`}>
+                                <div style={{ padding: '24px' }}>
+                                  {palmSketchData.length > 0 ? (
+                                    <Table
+                                      columns={[
+                                        { title: 'ID', dataIndex: 'zzmsmPk', width: 80 },
+                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
+                                        { title: '围岩等级', dataIndex: 'rockGrade', width: 100 },
+                                        { title: '涌水情况', dataIndex: 'waterInflow', width: 100 },
+                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
+                                        { title: '备注', dataIndex: 'addition' }
+                                      ]}
+                                      data={palmSketchData}
+                                      pagination={false}
+                                      rowKey="zzmsmPk"
+                                    />
+                                  ) : (
+                                    <Empty description="暂无掌子面素描数据" />
+                                  )}
+                                </div>
+                              </TabPane>
+                              <TabPane key="tunnel-sketch" title={`洞身素描 (${tunnelSketchData.length})`}>
+                                <div style={{ padding: '24px' }}>
+                                  {tunnelSketchData.length > 0 ? (
+                                    <Table
+                                      columns={[
+                                        { title: 'ID', dataIndex: 'dssmPk', width: 80 },
+                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
+                                        { title: '衬砌厚度(cm)', dataIndex: 'liningThickness', width: 120 },
+                                        { title: '裂缝数量', dataIndex: 'crackCount', width: 100 },
+                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
+                                        { title: '备注', dataIndex: 'addition' }
+                                      ]}
+                                      data={tunnelSketchData}
+                                      pagination={false}
+                                      rowKey="dssmPk"
+                                    />
+                                  ) : (
+                                    <Empty description="暂无洞身素描数据" />
+                                  )}
+                                </div>
+                              </TabPane>
+                              <TabPane key="drilling" title={`钻探法 (${drillingData.length})`}>
+                                <div style={{ padding: '24px' }}>
+                                  {drillingData.length > 0 ? (
+                                    <Table
+                                      columns={[
+                                        { title: 'ID', dataIndex: 'ztfPk', width: 80 },
+                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
+                                        { title: '钻探深度(m)', dataIndex: 'drillDepth', width: 120 },
+                                        { title: '取芯长度(m)', dataIndex: 'coreLength', width: 120 },
+                                        { title: '岩石类型', dataIndex: 'rockType', width: 100 },
+                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
+                                        { title: '备注', dataIndex: 'addition' }
+                                      ]}
+                                      data={drillingData}
+                                      pagination={false}
+                                      rowKey="ztfPk"
+                                    />
+                                  ) : (
+                                    <Empty description="暂无钻探法数据" />
+                                  )}
+                                </div>
+                              </TabPane>
+                              <TabPane key="surface" title="地表补充">
+                                <div style={{ padding: '24px' }}>
+                                  {surfaceData ? (
+                                    <div>
+                                      <pre>{JSON.stringify(surfaceData, null, 2)}</pre>
+                                    </div>
+                                  ) : (
+                                    <Empty description="暂无地表补充数据" />
+                                  )}
+                                </div>
+                              </TabPane>
+                            </Tabs>
+                          </Spin>
+                        </Card>
+
                         {/* 三个导航按钮 */}
-                        <Card bodyStyle={{ padding: '24px' }}>
+                        <Card bodyStyle={{ padding: '24px' }} style={{ marginTop: '20px' }}>
                           <Space size="large">
                             <Button
                               type="primary"

@@ -7,8 +7,8 @@
  */
 export function isAuthenticated(): boolean {
   const token = localStorage.getItem('token')
-  const username = localStorage.getItem('username')
-  return !!(token && username)
+  const login = localStorage.getItem('login')
+  return !!(token && login)
 }
 
 /**
@@ -17,7 +17,7 @@ export function isAuthenticated(): boolean {
 export function getCurrentUser() {
   return {
     token: localStorage.getItem('token'),
-    username: localStorage.getItem('username'),
+    login: localStorage.getItem('login'),
     userId: localStorage.getItem('userId'),
     roles: JSON.parse(localStorage.getItem('roles') || '[]')
   }
@@ -29,10 +29,10 @@ export function getCurrentUser() {
  */
 export function logout() {
   localStorage.removeItem('token')
-  localStorage.removeItem('username')
+  localStorage.removeItem('login')
   localStorage.removeItem('userId')
   localStorage.removeItem('roles')
-  // 不清除 rememberedUsername，保留记住的用户名
+  // 不清除 rememberedLogin，保留记住的登录名
 }
 
 /**
@@ -40,14 +40,15 @@ export function logout() {
  */
 export function saveLoginInfo(
   token: string,
-  username: string,
-  userId: number,
+  login: string,
+  userId: number | undefined,
   roles: string[]
 ) {
   localStorage.setItem('token', token)
-  localStorage.setItem('username', username)
-  localStorage.setItem('userId', userId.toString())
-  localStorage.setItem('roles', JSON.stringify(roles))
+  localStorage.setItem('login', login)
+  // userId 可能为 undefined，需要处理
+  localStorage.setItem('userId', userId ? userId.toString() : '0')
+  localStorage.setItem('roles', JSON.stringify(roles || []))
 }
 
 

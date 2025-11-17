@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Tabs, Layout, Avatar, Dropdown, Menu, Space, Typography, Message } from '@arco-design/web-react';
 import { IconFile, IconExclamationCircle, IconQuestionCircle, IconUser, IconDown } from '@arco-design/web-react/icon';
+import { logout } from '../utils/auth';
+import http from '../utils/http';
 import './HomePage.css';
 
 const { Header, Content } = Layout;
@@ -10,6 +12,46 @@ const TabPane = Tabs.TabPane;
 
 function HomePage() {
   const navigate = useNavigate();
+
+  // 处理用户菜单点击
+  const handleMenuClick = async (key: string) => {
+    switch (key) {
+      case 'profile':
+        Message.info('个人中心功能开发中...');
+        break;
+      case 'settings':
+        Message.info('设置功能开发中...');
+        break;
+      case 'logout':
+        await handleLogout();
+        break;
+      default:
+        break;
+    }
+  };
+
+  // 处理退出登录
+  const handleLogout = async () => {
+    try {
+      // 调用后端退出登录API
+      await http.post('/api/auth/logout');
+      
+      // 清除本地存储
+      logout();
+      
+      Message.success('退出登录成功');
+      
+      // 跳转到登录页
+      navigate('/login');
+    } catch (error) {
+      console.error('退出登录失败:', error);
+      
+      // 即使后端API失败，也清除本地存储并跳转
+      logout();
+      Message.warning('已退出登录');
+      navigate('/login');
+    }
+  };
 
   // 下载文件的通用函数
   const handleDownload = async (fileType: string) => {
@@ -164,7 +206,7 @@ function HomePage() {
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
           <Dropdown 
             droplist={
-              <Menu>
+              <Menu onClickMenuItem={handleMenuClick}>
                 {userMenuItems.map(item => (
                   <Menu.Item key={item.key}>{item.label}</Menu.Item>
                 ))}

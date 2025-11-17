@@ -196,6 +196,17 @@ class APIAdapter {
   }
 
   /**
+   * 更新预报设计记录
+   */
+  async updateForecastDesign(id: string, data: any) {
+    if (USE_REAL_API) {
+      return realAPI.updateForecastDesign(id, data);
+    } else {
+      return { success: true };
+    }
+  }
+
+  /**
    * 删除预报设计记录
    */
   async deleteForecastDesign(id: string) {
@@ -590,6 +601,229 @@ class APIAdapter {
       total,
       pages: Math.ceil(total / pageSize)
     };
+  }
+
+  // ========== 五种预报方法 ==========
+
+  // 获取物探法列表
+  async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+    if (USE_REAL_API) {
+      return realAPI.getGeophysicalList(params);
+    } else {
+      // Mock数据
+      const mockData = [
+        {
+          wtfPk: 1,
+          wtfId: 'wtf_001',
+          sitePk: 1,
+          ybPk: 1,
+          method: 1,
+          methodName: '地质雷达',
+          dkname: 'DK',
+          dkilo: 713.920,
+          wtfLength: 150,
+          monitordate: '2024-01-15',
+          originalfile: '地质雷达_001.dat',
+          addition: '地质雷达探测记录，发现异常区域',
+          images: '地质雷达_001.jpg',
+          gmtCreate: '2024-01-15T10:30:00',
+          gmtModified: '2024-01-15T10:30:00'
+        },
+        {
+          wtfPk: 2,
+          wtfId: 'wtf_002',
+          sitePk: 1,
+          ybPk: 2,
+          method: 2,
+          methodName: '红外探测',
+          dkname: 'DK',
+          dkilo: 714.100,
+          wtfLength: 120,
+          monitordate: '2024-01-20',
+          originalfile: '红外探测_002.dat',
+          addition: '红外探测正常',
+          images: '红外探测_002.jpg',
+          gmtCreate: '2024-01-20T14:20:00',
+          gmtModified: '2024-01-20T14:20:00'
+        },
+        {
+          wtfPk: 3,
+          wtfId: 'wtf_003',
+          sitePk: 1,
+          ybPk: 3,
+          method: 3,
+          methodName: '陆地声呐',
+          dkname: 'DK',
+          dkilo: 714.500,
+          wtfLength: 180,
+          monitordate: '2024-02-01',
+          originalfile: '陆地声呐_003.dat',
+          addition: '陆地声呐探测，发现溶洞',
+          images: '陆地声呐_003.jpg',
+          gmtCreate: '2024-02-01T09:15:00',
+          gmtModified: '2024-02-01T09:15:00'
+        }
+      ];
+      return { 
+        records: mockData, 
+        total: mockData.length, 
+        current: 1, 
+        size: 10, 
+        pages: 1 
+      };
+    }
+  }
+
+  // 获取掌子面素描列表
+  async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+    if (USE_REAL_API) {
+      return realAPI.getPalmSketchList(params);
+    } else {
+      const mockData = [
+        {
+          zzmsmPk: 1,
+          zzmsmId: 'zzm_001',
+          sitePk: 1,
+          ybPk: 1,
+          dkname: 'DK',
+          dkilo: 713.920,
+          monitordate: '2024-01-16',
+          rockGrade: 'III',
+          waterInflow: '中等',
+          addition: '掌子面岩体完整，节理发育',
+          images: 'zzm_001.jpg',
+          gmtCreate: '2024-01-16T08:30:00',
+          gmtModified: '2024-01-16T08:30:00'
+        },
+        {
+          zzmsmPk: 2,
+          zzmsmId: 'zzm_002',
+          sitePk: 1,
+          ybPk: 2,
+          dkname: 'DK',
+          dkilo: 714.200,
+          monitordate: '2024-01-22',
+          rockGrade: 'IV',
+          waterInflow: '少量',
+          addition: '掌子面稳定，局部有渗水',
+          images: 'zzm_002.jpg',
+          gmtCreate: '2024-01-22T10:15:00',
+          gmtModified: '2024-01-22T10:15:00'
+        }
+      ];
+      return { 
+        records: mockData, 
+        total: mockData.length, 
+        current: 1, 
+        size: 10, 
+        pages: 1 
+      };
+    }
+  }
+
+  // 获取洞身素描列表
+  async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+    if (USE_REAL_API) {
+      return realAPI.getTunnelSketchList(params);
+    } else {
+      const mockData = [
+        {
+          dssmPk: 1,
+          dssmId: 'ds_001',
+          sitePk: 1,
+          ybPk: 1,
+          dkname: 'DK',
+          dkilo: 713.850,
+          monitordate: '2024-01-18',
+          liningThickness: 35,
+          crackCount: 2,
+          addition: '洞身衬砌完好，发现2条细微裂缝',
+          images: 'ds_001.jpg',
+          gmtCreate: '2024-01-18T14:00:00',
+          gmtModified: '2024-01-18T14:00:00'
+        },
+        {
+          dssmPk: 2,
+          dssmId: 'ds_002',
+          sitePk: 1,
+          ybPk: 2,
+          dkname: 'DK',
+          dkilo: 714.300,
+          monitordate: '2024-01-25',
+          liningThickness: 40,
+          crackCount: 0,
+          addition: '洞身状态良好，无明显缺陷',
+          images: 'ds_002.jpg',
+          gmtCreate: '2024-01-25T11:30:00',
+          gmtModified: '2024-01-25T11:30:00'
+        }
+      ];
+      return { 
+        records: mockData, 
+        total: mockData.length, 
+        current: 1, 
+        size: 10, 
+        pages: 1 
+      };
+    }
+  }
+
+  // 获取钻探法列表
+  async getDrillingList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+    if (USE_REAL_API) {
+      return realAPI.getDrillingList(params);
+    } else {
+      const mockData = [
+        {
+          ztfPk: 1,
+          ztfId: 'zt_001',
+          sitePk: 1,
+          ybPk: 1,
+          dkname: 'DK',
+          dkilo: 713.900,
+          drillDepth: 50,
+          coreLength: 48,
+          monitordate: '2024-01-12',
+          rockType: '花岗岩',
+          addition: '钻探取芯完整，岩体强度高',
+          images: 'zt_001.jpg',
+          gmtCreate: '2024-01-12T09:00:00',
+          gmtModified: '2024-01-12T09:00:00'
+        },
+        {
+          ztfPk: 2,
+          ztfId: 'zt_002',
+          sitePk: 1,
+          ybPk: 2,
+          dkname: 'DK',
+          dkilo: 714.150,
+          drillDepth: 45,
+          coreLength: 42,
+          monitordate: '2024-01-28',
+          rockType: '砂岩',
+          addition: '钻探发现软弱夹层',
+          images: 'zt_002.jpg',
+          gmtCreate: '2024-01-28T13:45:00',
+          gmtModified: '2024-01-28T13:45:00'
+        }
+      ];
+      return { 
+        records: mockData, 
+        total: mockData.length, 
+        current: 1, 
+        size: 10, 
+        pages: 1 
+      };
+    }
+  }
+
+  // 获取地表补充信息
+  async getSurfaceSupplementInfo(ybPk: string) {
+    if (USE_REAL_API) {
+      return realAPI.getSurfaceSupplementInfo(ybPk);
+    } else {
+      return null;
+    }
   }
 }
 

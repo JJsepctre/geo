@@ -51,15 +51,15 @@ export function checkRoutePermission(path: string): boolean {
  * 获取用户信息（包含角色）
  */
 export function getCurrentUser() {
-  const username = localStorage.getItem('username');
+  const login = localStorage.getItem('login');
   const userId = localStorage.getItem('userId');
   const roles = localStorage.getItem('roles');
   
-  if (!username || !userId || !roles) return null;
+  if (!login || !roles) return null;
   
   return {
-    username,
-    userId: parseInt(userId),
+    login,
+    userId: userId ? parseInt(userId) : 0,
     roles: JSON.parse(roles),
     role: getCurrentUserRole()
   };

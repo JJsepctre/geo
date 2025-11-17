@@ -7,11 +7,6 @@ import {
   Space, 
   Table, 
   Empty,
-  Layout,
-  Menu,
-  Avatar,
-  Dropdown,
-  Typography,
   Message,
   Spin,
   Modal,
@@ -21,14 +16,12 @@ import {
   Input,
   InputNumber
 } from '@arco-design/web-react'
-import { IconUser, IconDown } from '@arco-design/web-react/icon'
+import { IconLeft } from '@arco-design/web-react/icon'
+import { useNavigate } from 'react-router-dom'
 import apiAdapter from '../services/apiAdapter'
 
 const { TabPane } = Tabs
 const { TextArea } = Input
-
-const { Header, Content } = Layout
-const { Text } = Typography
 
 // 地质预报记录类型
 type GeologyForecastRecord = {
@@ -42,6 +35,7 @@ type GeologyForecastRecord = {
 }
 
 function ForecastGeologyPage() {
+  const navigate = useNavigate()
   // 详情弹窗状态
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<GeologyForecastRecord | null>(null)
@@ -300,12 +294,6 @@ function ForecastGeologyPage() {
   const [pageSize, setPageSize] = useState(10)
   
   const methods = ['物探法', '掌子面素描', '洞身素描', '钻探法', '地表补充']
-  
-  const userMenuItems = [
-    { key: 'profile', label: '个人中心' },
-    { key: 'settings', label: '设置' },
-    { key: 'logout', label: '退出登录' },
-  ]
 
   // 获取地质预报数据
   const fetchGeologyData = async () => {
@@ -359,73 +347,28 @@ function ForecastGeologyPage() {
   }, [page, pageSize, selectedMethod])
 
   return (
-    <Layout style={{ height: '100vh' }}>
-      {/* 顶部导航栏 */}
-      <Header style={{ 
-        backgroundColor: '#fff', 
-        padding: '0 24px',
-        borderBottom: '1px solid #e8e9ea',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, color: '#1d2129', fontSize: '20px', fontWeight: 600 }}>
-            超前地质预报
-          </h3>
-          <Menu
-            mode="horizontal"
-            style={{ 
-              backgroundColor: 'transparent', 
-              border: 'none',
-              marginLeft: '60px'
-            }}
-            defaultSelectedKeys={['geology']}
-          >
-            <Menu.Item key="home">首页</Menu.Item>
-            <Menu.Item key="geology">地质预报</Menu.Item>
-          </Menu>
-        </div>
-        
-        <Dropdown 
-          droplist={
-            <Menu>
-              {userMenuItems.map(item => (
-                <Menu.Item key={item.key}>{item.label}</Menu.Item>
-              ))}
-            </Menu>
-          }
-        >
-          <Space style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: '6px' }}>
-            <Avatar size={32} style={{ backgroundColor: '#165dff' }}>
-              <IconUser />
-            </Avatar>
-            <Text>admin</Text>
-            <IconDown />
-          </Space>
-        </Dropdown>
-      </Header>
-
-      <Content style={{ padding: '24px', backgroundColor: '#f7f8fa' }}>
-        {/* 面包屑导航 */}
+    <div>
+        {/* 顶部信息栏 */}
         <div style={{ 
-          padding: '16px 24px', 
-          backgroundColor: '#7c5cfc', 
-          borderRadius: '8px',
-          marginBottom: '24px',
-          color: '#fff',
-          fontSize: '16px',
+          height: 44,
+          background: 'linear-gradient(90deg, #A18AFF 0%, #8B7AE6 100%)', 
+          borderRadius: 6,
+          marginBottom: 12,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          color: '#fff',
+          fontSize: '14px'
         }}>
-          <span>站前3标/青龙山隧道/青龙山隧道出口明洞</span>
+          <span>设计预报 / 人员信息 / 地质点/DK713+920/DK713+920/设计地质信息</span>
           <Button 
             type="text" 
-            icon={<span style={{ color: '#fff' }}>↩</span>}
+            icon={<IconLeft />}
             style={{ color: '#fff' }}
+            onClick={() => navigate('/hello')}
           >
+            返回
           </Button>
         </div>
 
@@ -889,8 +832,7 @@ function ForecastGeologyPage() {
             </TabPane>
           </Tabs>
         </Modal>
-      </Content>
-    </Layout>
+    </div>
   )
 }
 

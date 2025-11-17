@@ -26,8 +26,8 @@ interface LoginRequest {
 // 登录响应类型
 interface LoginResponse {
   token: string
-  username: string
-  userId: number
+  login?: string  // 后端可能不返回，使用可选
+  userId?: number
   roles: string[]
 }
 
@@ -49,19 +49,20 @@ function LoginPage() {
     try {
       console.log('🔐 登录请求:', { 
         url: '/api/auth/login',
-        username: values.username, 
+        login: values.username, 
         password: '******',
         fullPayload: {
-          username: values.username,
+          login: values.username,
           password: values.password
         }
       })
 
       // http拦截器已经返回response.data，所以response就是BaseResponse类型
+      // 注意：后端字段从 username 改为 login
       const response = await http.post<BaseResponse<LoginResponse>>(
         '/api/auth/login',
         {
-          username: values.username,
+          login: values.username,
           password: values.password
         }
       )
@@ -74,17 +75,32 @@ function LoginPage() {
       })
 
       // response已经是BaseResponse<LoginResponse>类型
-      if (response.resultcode === 200 && response.data) {
-        const { token, username, userId, roles } = response.data
+      // 注意：后端成功状态码是 0，不是 200
+      if (response.resultcode === 0 && response.data) {
+        // 打印后端返回的完整数据，用于调试
+        console.log('📦 [Login] 后端返回的完整数据:', response.data)
+        
+        const { token, login, userId, roles } = response.data
+        
+        // 如果后端没有返回login，使用登录时输入的用户名
+        const finalLogin = login || values.username
+        
+        console.log('📦 [Login] 解析后的数据:', {
+          token,
+          login: finalLogin,
+          userId,
+          roles,
+          note: login ? '使用后端返回的login' : '使用登录输入的username'
+        })
 
         // 存储token和用户信息
-        saveLoginInfo(token, username, userId, roles)
+        saveLoginInfo(token, finalLogin, userId, roles)
 
         // 如果勾选了记住密码
         if (values.remember) {
-          localStorage.setItem('rememberedUsername', values.username)
+          localStorage.setItem('rememberedLogin', values.username)
         } else {
-          localStorage.removeItem('rememberedUsername')
+          localStorage.removeItem('rememberedLogin')
         }
 
         Message.success('登录成功！')
@@ -150,11 +166,11 @@ function LoginPage() {
       return
     }
 
-    // 检查是否有记住的用户名
-    const rememberedUsername = localStorage.getItem('rememberedUsername')
-    if (rememberedUsername) {
+    // 检查是否有记住的登录名
+    const rememberedLogin = localStorage.getItem('rememberedLogin')
+    if (rememberedLogin) {
       form.setFieldsValue({
-        username: rememberedUsername,
+        username: rememberedLogin,
         remember: true
       })
     }

@@ -226,11 +226,6 @@ function UserManagementPage() {
     Message.info('批量同步员工功能开发中...');
   };
 
-  // 标段同步员工
-  const handleSectionSync = () => {
-    Message.info('标段同步员工功能开发中...');
-  };
-
   // 表格列定义
   const columns = [
     {
@@ -378,31 +373,341 @@ function UserManagementPage() {
     </div>
   );
 
+  // 标段数据类型
+  interface Section {
+    id: string;
+    code: string;
+    name: string;
+  }
+
+  // 模拟标段数据
+  const mockSections: Section[] = [
+    { id: '1', code: 'CQJZQ-2', name: 'CQJZQ-2' },
+    { id: '2', code: 'PXZQ-4', name: 'PXZQ-4' },
+    { id: '3', code: 'CQJZQ-8', name: 'CQJZQ-8' },
+    { id: '4', code: 'CQJZQ-7', name: 'CQJZQ-7' },
+    { id: '5', code: 'GSJXZQ-4标（中铁三局）', name: 'GSJXZQ-4标（中铁三局）' },
+    { id: '6', code: 'DRRBTJ-2标', name: 'DRRBTJ-2标' },
+    { id: '7', code: 'YXZQ-SG2', name: 'YXZQ-SG2' },
+    { id: '8', code: 'CQJZQ-13', name: 'CQJZQ-13' },
+    { id: '9', code: 'CQJZQ-12', name: 'CQJZQ-12' }
+  ];
+
+  // 同步人员名单
+  const handleSyncStaff = (section: Section) => {
+    Message.info(`正在同步 ${section.name} 的人员名单...`);
+    // TODO: 调用后端API进行同步
+  };
+
+  // 同步设计人员
+  const handleSyncDesigner = (section: Section) => {
+    Message.info(`正在同步 ${section.name} 的设计人员...`);
+    // TODO: 调用后端API进行同步
+  };
+
   // 标段同步员工页面内容
   const renderSectionSync = () => (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-      <IconSync style={{ fontSize: 64, color: '#165DFF', marginBottom: 20 }} />
-      <Title heading={4}>标段同步员工</Title>
-      <p style={{ color: '#86909C', marginBottom: 30 }}>
-        按标段同步员工信息
-      </p>
-      <Button type="primary" size="large" icon={<IconSync />}>
-        选择标段同步
-      </Button>
+    <div>
+      <Title heading={5} style={{ marginBottom: 20 }}>标段同步员工</Title>
+      
+      <div style={{ background: '#fff', padding: '20px', borderRadius: '4px' }}>
+        {/* 标段列表 */}
+        {mockSections.map((section) => (
+          <div
+            key={section.id}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 20px',
+              borderBottom: '1px solid #E5E6EB',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F7F8FA';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            {/* 左侧：标段名称 */}
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '14px', color: '#1D2129' }}>
+                {section.name}
+              </span>
+            </div>
+
+            {/* 右侧：操作按钮 */}
+            <Space size="medium">
+              <Button
+                type="primary"
+                icon={<IconSync />}
+                onClick={() => handleSyncStaff(section)}
+                style={{
+                  background: '#6366F1',
+                  borderColor: '#6366F1'
+                }}
+              >
+                同步人员名单
+              </Button>
+              <Button
+                type="primary"
+                icon={<IconSync />}
+                onClick={() => handleSyncDesigner(section)}
+                style={{
+                  background: '#6366F1',
+                  borderColor: '#6366F1'
+                }}
+              >
+                同步设计人员
+              </Button>
+            </Space>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
-  // 同步工作组页面内容
+  // 工点数据类型
+  interface WorkPoint {
+    id: string;
+    name: string;
+    tunnelId: string;
+    createTime: string;
+    startMileage: string;
+    endMileage: string;
+  }
+
+  // 模拟工点数据
+  const mockWorkPoints: WorkPoint[] = [
+    {
+      id: '364708',
+      name: '那邑2#斜井进山口工区',
+      tunnelId: '364708',
+      createTime: '2025-11-16 03:00:14',
+      startMileage: 'D1K281+512.0',
+      endMileage: '281+275.0'
+    },
+    {
+      id: '364570',
+      name: '长坡隧道斜风道',
+      tunnelId: '364570',
+      createTime: '2025-11-14 03:00:23',
+      startMileage: 'ZFDK0+169.368',
+      endMileage: 'ZFDK0+000'
+    },
+    {
+      id: '364569',
+      name: '地中隧道进口明洞段',
+      tunnelId: '364569',
+      createTime: '2025-11-14 03:00:21',
+      startMileage: 'DK183+129.8',
+      endMileage: 'DK183+138.9'
+    },
+    {
+      id: '364390',
+      name: '长坡隧道进口端',
+      tunnelId: '364390',
+      createTime: '2025-11-08 03:00:21',
+      startMileage: 'YFDK0.000',
+      endMileage: 'YFDK0+57.38'
+    },
+    {
+      id: '364384',
+      name: '长坡隧道2#斜井',
+      tunnelId: '364384',
+      createTime: '2025-11-08 03:00:19',
+      startMileage: 'BDK0+58.75',
+      endMileage: 'BDK0.000'
+    },
+    {
+      id: '364283',
+      name: '2#竖井工区明洞进洞口工程',
+      tunnelId: '364283',
+      createTime: '2025-11-07 03:00:12',
+      startMileage: 'D1K211+726',
+      endMileage: 'D1K211+800'
+    },
+    {
+      id: '362929',
+      name: '2#竖井5#横洞进洞进洞口工程',
+      tunnelId: '362929',
+      createTime: '2025-11-07 03:00:10',
+      startMileage: 'D1K213+356',
+      endMileage: 'D1K213+580'
+    },
+    {
+      id: '364282',
+      name: '2#竖井5#横洞进洞进洞口工程',
+      tunnelId: '364282',
+      createTime: '2025-11-07 03:00:09',
+      startMileage: 'D1K213+356',
+      endMileage: 'D1K213+200'
+    },
+    {
+      id: '363421',
+      name: '2#竖井工区5#横洞进洞口工程',
+      tunnelId: '363421',
+      createTime: '2025-11-07 03:00:07',
+      startMileage: 'D1K211+726',
+      endMileage: 'D1K208+715'
+    },
+    {
+      id: '362908',
+      name: '1#竖井40#横洞进洞进洞口区',
+      tunnelId: '362908',
+      createTime: '2025-11-07 03:00:05',
+      startMileage: 'D1K206+395',
+      endMileage: 'D1K206+250'
+    }
+  ];
+
+  // 工点搜索状态
+  const [workPointSearchForm] = Form.useForm();
+  const [workPoints, setWorkPoints] = useState<WorkPoint[]>(mockWorkPoints);
+  const [workPointLoading, setWorkPointLoading] = useState(false);
+  const [workPointPagination, setWorkPointPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: mockWorkPoints.length
+  });
+
+  // 搜索工点
+  const handleSearchWorkPoint = () => {
+    const values = workPointSearchForm.getFieldsValue();
+    setWorkPointLoading(true);
+    
+    setTimeout(() => {
+      let filtered = [...mockWorkPoints];
+      if (values.name) {
+        filtered = filtered.filter(wp => wp.name.includes(values.name));
+      }
+      setWorkPoints(filtered);
+      setWorkPointPagination({
+        ...workPointPagination,
+        total: filtered.length,
+        current: 1
+      });
+      setWorkPointLoading(false);
+    }, 300);
+  };
+
+  // 同步工点信息
+  const handleSyncWorkPoints = () => {
+    Message.loading('正在同步工点信息...');
+    setTimeout(() => {
+      Message.success('工点信息同步成功！');
+    }, 1500);
+  };
+
+  // 工点表格列定义
+  const workPointColumns = [
+    {
+      title: '工点名称',
+      dataIndex: 'name',
+      width: 250
+    },
+    {
+      title: '掌ID',
+      dataIndex: 'tunnelId',
+      width: 120
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      width: 180
+    },
+    {
+      title: '开始里程',
+      dataIndex: 'startMileage',
+      width: 150
+    },
+    {
+      title: '结束里程',
+      dataIndex: 'endMileage',
+      width: 150
+    },
+    {
+      title: '操作',
+      width: 100,
+      render: () => (
+        <Button type="text" size="small" style={{ color: '#165DFF' }}>
+          详情
+        </Button>
+      )
+    }
+  ];
+
+  // 同步工作组页面内容（改为工点信息管理）
   const renderWorkGroupSync = () => (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-      <IconSync style={{ fontSize: 64, color: '#165DFF', marginBottom: 20 }} />
-      <Title heading={4}>同步工作组</Title>
-      <p style={{ color: '#86909C', marginBottom: 30 }}>
-        同步工作组信息
-      </p>
-      <Button type="primary" size="large" icon={<IconSync />}>
-        开始同步工作组
-      </Button>
+    <div>
+      <Title heading={5} style={{ marginBottom: 20 }}>工点信息管理</Title>
+      
+      {/* 搜索栏 */}
+      <div style={{ 
+        background: '#fff', 
+        padding: '20px', 
+        borderRadius: '4px',
+        marginBottom: '16px'
+      }}>
+        <Form
+          form={workPointSearchForm}
+          layout="inline"
+          style={{ width: '100%' }}
+        >
+          <Row gutter={16} style={{ width: '100%' }}>
+            <Col span={6}>
+              <FormItem label="工点名称:" field="name" style={{ marginBottom: 0 }}>
+                <Input placeholder="" allowClear />
+              </FormItem>
+            </Col>
+            <Col span={18} style={{ textAlign: 'right' }}>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<IconSync />}
+                  onClick={handleSyncWorkPoints}
+                  style={{
+                    background: '#6366F1',
+                    borderColor: '#6366F1'
+                  }}
+                >
+                  同步工点信息
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<IconSearch />}
+                  onClick={handleSearchWorkPoint}
+                >
+                  查询
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Form>
+      </div>
+
+      {/* 工点列表表格 */}
+      <Table
+        columns={workPointColumns}
+        data={workPoints}
+        loading={workPointLoading}
+        pagination={{
+          ...workPointPagination,
+          showTotal: true,
+          sizeCanChange: true,
+          pageSizeChangeResetCurrent: true,
+          onChange: (current, pageSize) => {
+            setWorkPointPagination({ 
+              ...workPointPagination, 
+              current, 
+              pageSize 
+            });
+          }
+        }}
+        border
+        style={{ background: '#fff' }}
+      />
     </div>
   );
 
@@ -495,7 +800,7 @@ function UserManagementPage() {
           <TabPane key="section-sync-user" title="标段同步员工">
             {renderSectionSync()}
           </TabPane>
-          <TabPane key="work-group" title="同步工作组">
+          <TabPane key="work-group" title="工点信息管理">
             {renderWorkGroupSync()}
           </TabPane>
           <TabPane key="role-management" title="角色管理">

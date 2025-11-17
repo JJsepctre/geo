@@ -12,10 +12,10 @@ interface ProtectedRouteProps {
  */
 function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = localStorage.getItem('token')
-  const username = localStorage.getItem('username')
+  const login = localStorage.getItem('login')
 
   // 检查是否已登录
-  if (!token || !username) {
+  if (!token || !login) {
     // 显示提示信息
     Message.warning('请先登录')
     

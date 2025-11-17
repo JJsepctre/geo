@@ -9,6 +9,7 @@ import ForecastDesignPage from '../pages/ForecastDesignPage'
 import ForecastRockPage from '../pages/ForecastRockPage'
 import ForecastGeologyPage from '../pages/ForecastGeologyPage'
 import ForecastComprehensivePage from '../pages/ForecastComprehensivePage'
+import WorkPointDetailPage from '../pages/WorkPointDetailPage'
 import DesignLayout from '../components/DesignLayout'
 import ApiTestPage from '../pages/ApiTestPage'
 import SwaggerAnalyzer from '../pages/SwaggerAnalyzer'
@@ -79,7 +80,9 @@ const router = createBrowserRouter([
     path: 'forecast/rock',
     element: (
       <ProtectedRoute>
-        <ForecastRockPage />
+        <DesignLayout>
+          <ForecastRockPage />
+        </DesignLayout>
       </ProtectedRoute>
     )
   },
@@ -87,7 +90,9 @@ const router = createBrowserRouter([
     path: 'forecast/geology',
     element: (
       <ProtectedRoute>
-        <ForecastGeologyPage />
+        <DesignLayout>
+          <ForecastGeologyPage />
+        </DesignLayout>
       </ProtectedRoute>
     )
   },
@@ -96,6 +101,16 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ForecastComprehensivePage />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: 'workpoint/:workPointId',
+    element: (
+      <ProtectedRoute>
+        <DesignLayout>
+          <WorkPointDetailPage />
+        </DesignLayout>
       </ProtectedRoute>
     )
   },
