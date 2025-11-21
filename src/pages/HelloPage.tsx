@@ -553,19 +553,19 @@ function HelloPage() {
             borderLeft: '2px solid #165dff'
           }}>
             <Spin loading={loadingProject}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '12px', lineHeight: '1.2' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', lineHeight: '1.4', padding: '4px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '12px' }} />
+                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '14px' }} />
                   <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '4px' }}>建设单位:</span>
-                  <span style={{ color: '#4e5969' }}>
+                  <span style={{ color: '#4e5969', fontWeight: 500 }}>
                     {projectInfo?.constructionUnit || '中国铁路昆明局集团有限公司'}
                   </span>
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '12px' }} />
+                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '14px' }} />
                   <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '4px' }}>项目名称:</span>
-                  <span style={{ color: '#4e5969' }}>
+                  <span style={{ color: '#4e5969', fontWeight: 500 }}>
                     {projectInfo?.name || '渝昆高铁引入昆明枢纽组织工程'}
                   </span>
                 </div>
