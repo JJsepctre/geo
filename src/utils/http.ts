@@ -30,9 +30,20 @@ axiosInstance.interceptors.request.use(
       // config.headers['X-Auth-Token'] = token;
       // config.headers['token'] = token;
       
+      // 构建完整的URL（包含查询参数）
+      let fullUrlWithParams = (config.baseURL || '') + (config.url || '');
+      if (config.params && Object.keys(config.params).length > 0) {
+        const queryString = new URLSearchParams(config.params).toString();
+        fullUrlWithParams += '?' + queryString;
+      }
+      
       console.log('📤 [HTTP] 请求详情:', {
         url: config.url,
         method: config.method,
+        params: config.params,
+        data: config.data,  // POST请求的Body数据
+        fullUrl: (config.baseURL || '') + (config.url || ''),
+        fullUrlWithParams: fullUrlWithParams,
         headers: {
           Authorization: config.headers.Authorization,
         }

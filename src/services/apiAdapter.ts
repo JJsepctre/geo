@@ -550,6 +550,22 @@ class APIAdapter {
     }
   }
 
+  /**
+   * 获取地震波反射详情 (TSP)
+   */
+  async getTspDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getTspDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getTspDetail(ybPk);
+      console.log('🔍 [apiAdapter] getTspDetail 结果:', result);
+      return result;
+    } else {
+      // Mock实现
+      console.log('🎭 [apiAdapter] getTspDetail Mock模式');
+      return null;
+    }
+  }
+
   // ========== Mock数据生成方法 ==========
 
   private generateMockDetectionData(workPointId: string) {
@@ -767,7 +783,7 @@ class APIAdapter {
   // ========== 五种预报方法 ==========
 
   // 获取物探法列表
-  async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+  async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId: string }) {
     if (USE_REAL_API) {
       const result = await realAPI.getGeophysicalList(params);
       console.log('🔍 [apiAdapter] getGeophysicalList 真实API结果:', result);
@@ -843,7 +859,7 @@ class APIAdapter {
   }
 
   // 获取掌子面素描列表
-  async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+  async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId: string }) {
     if (USE_REAL_API) {
       const result = await realAPI.getPalmSketchList(params);
       console.log('🔍 [apiAdapter] getPalmSketchList 真实API结果:', result);
@@ -892,7 +908,7 @@ class APIAdapter {
   }
 
   // 获取洞身素描列表
-  async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+  async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId: string }) {
     if (USE_REAL_API) {
       const result = await realAPI.getTunnelSketchList(params);
       console.log('🔍 [apiAdapter] getTunnelSketchList 真实API结果:', result);
@@ -941,7 +957,7 @@ class APIAdapter {
   }
 
   // 获取钻探法列表
-  async getDrillingList(params: { pageNum: number; pageSize: number; siteId?: string }) {
+  async getDrillingList(params: { pageNum: number; pageSize: number; siteId: string }) {
     if (USE_REAL_API) {
       const result = await realAPI.getDrillingList(params);
       console.log('🔍 [apiAdapter] getDrillingList 真实API结果:', result);
@@ -991,6 +1007,17 @@ class APIAdapter {
     }
   }
 
+  // 获取地表补充列表
+  async getSurfaceSupplementList(params: { pageNum: number; pageSize: number; siteId: string }) {
+    if (USE_REAL_API) {
+      const result = await realAPI.getSurfaceSupplementList(params);
+      console.log('🔍 [apiAdapter] getSurfaceSupplementList 真实API结果:', result);
+      return result;
+    } else {
+      return { records: [], total: 0, current: 1, size: 10, pages: 0 };
+    }
+  }
+
   // 获取地表补充信息
   async getSurfaceSupplementInfo(ybPk: string) {
     if (USE_REAL_API) {
@@ -1013,9 +1040,9 @@ class APIAdapter {
     }
   }
 
-  async updateGeophysical(id: string, data: any) {
+  async updateGeophysical(id: string, data: any, method?: string | null): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
-      return realAPI.updateGeophysicalMethod(id, data);
+      return realAPI.updateGeophysicalMethod(id, data, method);
     } else {
       return { success: true };
     }
@@ -1057,14 +1084,19 @@ class APIAdapter {
 
   // 掌子面素描操作
   async getPalmSketchDetail(id: string) {
+    console.log('🔍 [apiAdapter] getPalmSketchDetail 调用, id:', id, 'USE_REAL_API:', USE_REAL_API);
     if (USE_REAL_API) {
-      return realAPI.getFaceSketchDetail(parseInt(id));
+      const parsedId = parseInt(id);
+      console.log('🔍 [apiAdapter] getPalmSketchDetail 解析后的ID:', parsedId);
+      const result = await realAPI.getFaceSketchDetail(parsedId);
+      console.log('🔍 [apiAdapter] getPalmSketchDetail 结果:', result);
+      return result;
     } else {
       return { id, method: '掌子面素描', details: 'Mock详情数据' };
     }
   }
 
-  async updatePalmSketch(id: string, data: any) {
+  async updatePalmSketch(id: string, data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
       return realAPI.updateFaceSketch(id, data);
     } else {
@@ -1090,7 +1122,7 @@ class APIAdapter {
     }
   }
 
-  async updateTunnelSketch(id: string, data: any) {
+  async updateTunnelSketch(id: string, data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
       return realAPI.updateTunnelSketch(id, data);
     } else {
@@ -1115,7 +1147,7 @@ class APIAdapter {
     }
   }
 
-  async updateDrilling(id: string, data: any) {
+  async updateDrilling(id: string, data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
       return realAPI.updateDrillingMethod(id, data);
     } else {

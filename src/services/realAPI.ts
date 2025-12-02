@@ -12,8 +12,9 @@ import type { Tunnel, WorkPoint, Project } from './geoForecastAPI';
 // 通用响应格式
 export interface BaseResponse<T = any> {
   resultcode: number;
-  message: string;
-  data: T;
+  message?: string;
+  msg?: string;  // 有些接口用 msg 而不是 message
+  data?: T;
 }
 
 // 分页响应格式
@@ -520,17 +521,119 @@ class RealAPIService {
   // ========== 标段管理 ==========
   
   /**
-   * 获取标段列表（包含工作位和工点的完整层级结构）
-   * @param userId 用户ID
-   * @returns 标段列表，包含嵌套的工作位和工点
+   * 获取用户已授权标段列表
+   * @returns 标段列表
    */
-  async getBidSectionList(userId?: number): Promise<any> {
-    const uid = userId || this.userId;
-    const response = await get<any>(`/api/bd/list`, { params: { userid: uid } });
-    console.log('🔍 [realAPI] getBidSectionList 原始响应:', response);
-    console.log('🔍 [realAPI] bdVOList 存在?', !!response?.bdVOList);
-    console.log('🔍 [realAPI] bdVOList 长度:', response?.bdVOList?.length);
-    return response;
+  async getBidSectionList(): Promise<any> {
+    try {
+      console.log('🚀 [realAPI] getBidSectionList 调用新API: /api/v1/bd/bd-xm');
+      
+      const response = await get<any>(`/api/v1/bd/bd-xm`);
+      
+      console.log('🔍 [realAPI] getBidSectionList 原始响应:', response);
+      console.log('🔍 [realAPI] 响应类型:', typeof response);
+      console.log('🔍 [realAPI] 是否为数组:', Array.isArray(response));
+      console.log('🔍 [realAPI] 响应内容详情:', JSON.stringify(response, null, 2));
+      
+      // 检查不同的响应格式
+      let dataArray = null;
+      
+      if (Array.isArray(response)) {
+        // 直接是数组格式 (HTTP拦截器已经提取了data)
+        dataArray = response;
+        console.log('🔍 [realAPI] 直接数组格式，长度:', dataArray.length);
+      } else if (response?.resultcode === 200 && response?.data) {
+        // 标准响应格式
+        dataArray = response.data;
+        console.log('🔍 [realAPI] 标准响应格式，数据长度:', dataArray?.length);
+      } else if (response?.data && Array.isArray(response.data)) {
+        // 只有data字段且是数组
+        dataArray = response.data;
+        console.log('🔍 [realAPI] 只有data字段，数据长度:', dataArray?.length);
+      } else {
+        // 尝试直接使用response作为数据
+        console.log('🔍 [realAPI] 尝试直接使用response作为数据:', response);
+        if (response && typeof response === 'object' && !Array.isArray(response)) {
+          // 可能是单个对象，转换为数组
+          dataArray = [response];
+          console.log('🔍 [realAPI] 单个对象转换为数组');
+        }
+      }
+      
+      if (dataArray && Array.isArray(dataArray)) {
+        // 转换新API格式为旧格式兼容
+        const bdVOList = dataArray.map((item: any) => ({
+          bd: {
+            bdPk: item.bdID,
+            bdname: item.bdname,
+            bdcode: item.bdcode,
+            xmId: item.xmID,
+            xmname: item.xmname,
+            xmcode: item.xmcode
+          }
+        }));
+        
+        console.log('🔍 [realAPI] 转换后的bdVOList:', bdVOList);
+        const result = { bdVOList, resultcode: 200 };
+        console.log('🔍 [realAPI] getBidSectionList 最终返回:', result);
+        return result;
+      }
+      
+      console.log('⚠️ [realAPI] 无法解析响应数据格式');
+      return { bdVOList: [], resultcode: response?.resultcode || 500 };
+    } catch (error) {
+      console.error('❌ [realAPI] getBidSectionList 异常:', error);
+      if (error instanceof Error) {
+        console.error('❌ [realAPI] 异常详情:', error.message, error.stack);
+      }
+      // 容错处理：发生异常时返回空列表，而不是抛出错误导致页面崩溃
+      console.warn('⚠️ [realAPI] 由于API错误，返回空标段列表作为容错');
+      return { bdVOList: [], resultcode: 500 };
+    }
+  }
+
+  /**
+   * 获取标段和工点信息
+   * @param bdId 标段ID
+   * @returns 标段和工点信息
+   */
+  async getBidSectionAndWorkPoints(bdId: string): Promise<any> {
+    try {
+      console.log('🚀 [realAPI] getBidSectionAndWorkPoints 调用新API: /api/v1/bd/bd-gd/' + bdId);
+      
+      const response = await get<any>(`/api/v1/bd/bd-gd/${bdId}`);
+      
+      console.log('🔍 [realAPI] getBidSectionAndWorkPoints 原始响应:', response);
+      console.log('🔍 [realAPI] 响应状态码:', response?.resultcode);
+      console.log('🔍 [realAPI] 响应数据:', response?.data);
+      console.log('🔍 [realAPI] bdInfoVO详情:', response?.bdInfoVO);
+      if (response?.bdInfoVO && response.bdInfoVO.length > 0) {
+        console.log('🔍 [realAPI] 第一个工作面详情:', response.bdInfoVO[0]);
+        console.log('🔍 [realAPI] 工作面的所有属性:', Object.keys(response.bdInfoVO[0] || {}));
+        
+        // 关键：查看gzwInfoVO数组中的真实工点数据
+        const gzwInfoVO = response.bdInfoVO[0].gzwInfoVO;
+        if (gzwInfoVO && gzwInfoVO.length > 0) {
+          console.log('🔍 [realAPI] gzwInfoVO数组长度:', gzwInfoVO.length);
+          console.log('🔍 [realAPI] 第一个真实工点详情:', gzwInfoVO[0]);
+          console.log('🔍 [realAPI] 真实工点的所有属性:', Object.keys(gzwInfoVO[0] || {}));
+          
+          // 打印所有工点的ID
+          gzwInfoVO.forEach((site: any, index: number) => {
+            console.log(`🔍 [realAPI] 工点${index + 1}:`, {
+              siteId: site.siteId || site.sitePk || site.id,
+              siteName: site.sitename || site.name,
+              所有属性: Object.keys(site)
+            });
+          });
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ [realAPI] getBidSectionAndWorkPoints 异常:', error);
+      throw error;
+    }
   }
 
   // ========== 物探法管理 ==========
@@ -676,14 +779,77 @@ class RealAPIService {
    * @returns 设计预报数据列表（分页）
    */
   async getDesignForecastList(params: {
-    userid?: number;
+    siteId?: string;
     pageNum?: number;
     pageSize?: number;
     method?: number;
     begin?: string;
     end?: string;
   }): Promise<any> {
-    return get<any>(`/api/sjyb/list`, { params: { userid: this.userId, ...params } });
+    try {
+      console.log('🚀 [realAPI] getDesignForecastList 调用新API: /api/v1/sjyb/list');
+      console.log('🔍 [realAPI] 请求参数:', params);
+      
+      // 使用新的API端点，需要siteId作为必需参数
+      const requestParams = {
+        siteId: params.siteId || '1', // 默认使用工点ID 1
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 10,
+        ...(params.method && { method: params.method }),
+        ...(params.begin && { begin: params.begin }),
+        ...(params.end && { end: params.end })
+      };
+      
+      // 尝试不同的siteId值进行测试
+      console.log('🧪 [realAPI] 测试不同的siteId值');
+      console.log('🔍 [realAPI] 当前使用的siteId:', requestParams.siteId);
+      
+      // 测试多个可能的ID值（包括工作面ID）
+      const testIds = ['230412', '11282', '1', '11457', '76833'];
+      
+      for (const testId of testIds) {
+        console.log(`\n🔍 [realAPI] 测试 siteId=${testId}`);
+        
+        // 关键：添加 method=99 获取全部数据
+        const testParams = { 
+          ...requestParams, 
+          siteId: testId,
+          method: 99,  // 99 代表获取全部预报方法
+          pageSize: 1000  // 增大pageSize以获取更多数据
+        };
+        
+        try {
+          const testResponse = await get<any>(`/api/v1/sjyb/list`, { params: testParams });
+          const testRecords = testResponse?.sjybIPage?.records || [];
+          const testTotal = testResponse?.sjybIPage?.total || 0;
+          
+          console.log(`📊 [realAPI] siteId=${testId} (method=99) 结果: records=${testRecords.length}, total=${testTotal}`);
+          
+          if (testTotal > 0) {
+            console.log(`✅ [realAPI] 找到有数据的siteId: ${testId}`);
+            console.log(`📄 [realAPI] 第一条数据:`, testRecords[0]);
+            requestParams.siteId = testId;
+            requestParams.method = 99;  // 使用找到的配置
+            requestParams.pageSize = 1000;
+            break;
+          }
+        } catch (error) {
+          console.log(`❌ [realAPI] siteId=${testId} 请求失败:`, error);
+        }
+      }
+      
+      console.log(`\n🎯 [realAPI] 最终使用的siteId: ${requestParams.siteId}\n`);
+      
+      const response = await get<any>(`/api/v1/sjyb/list`, { params: requestParams });
+      console.log('🔍 [realAPI] getDesignForecastList 响应:', response);
+      console.log('🔍 [realAPI] 响应的所有属性:', Object.keys(response || {}));
+      console.log('🔍 [realAPI] 完整响应结构:', JSON.stringify(response, null, 2));
+      
+      return response;
+    } catch (error) {
+      console.error('❌ [realAPI] getDesignForecastList 异常:', error);
+      throw error;
+    }
   }
 
   /**
@@ -767,16 +933,45 @@ class RealAPIService {
   }
 
   /**
-   * 获取掌子面素描详情
+   * 获取掌子面素描详细信息
    * @param zzmsmPk 掌子面素描主键
    * @returns 掌子面素描详细信息
    */
   async getFaceSketchDetail(zzmsmPk: number): Promise<any> {
-    return get<any>(`/api/zzmsm/${zzmsmPk}`);
+    try {
+      console.log('🔍 [realAPI] getFaceSketchDetail 请求, zzmsmPk:', zzmsmPk);
+      const response = await get<any>(`/api/v1/zzmsm/${zzmsmPk}`);
+      console.log('🔍 [realAPI] getFaceSketchDetail 响应:', response);
+      console.log('🔍 [realAPI] getFaceSketchDetail 响应类型:', typeof response);
+      console.log('🔍 [realAPI] getFaceSketchDetail 响应的所有键:', response ? Object.keys(response) : 'null');
+      console.log('🔍 [realAPI] getFaceSketchDetail 完整响应 JSON:', JSON.stringify(response, null, 2));
+      
+      // 检查响应格式
+      if (response && typeof response === 'object') {
+        // 如果有 resultcode 和 data 字段，返回 data
+        if (response.resultcode === 200 && response.data) {
+          console.log('✅ [realAPI] getFaceSketchDetail 成功 (标准格式), 数据:', response.data);
+          return response.data;
+        } 
+        // 如果 resultcode 是 0
+        else if (response.resultcode === 0 && response.data) {
+          console.log('✅ [realAPI] getFaceSketchDetail 成功 (resultcode=0), 数据:', response.data);
+          return response.data;
+        }
+        // 如果直接是数据对象（有 zzmsmPk 字段）
+        else if (response.zzmsmPk || response.ybPk) {
+          console.log('✅ [realAPI] getFaceSketchDetail 成功 (直接数据), 数据:', response);
+          return response;
+        }
+      }
+      
+      console.warn('⚠️ [realAPI] getFaceSketchDetail 未知响应格式，返回原始响应:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ [realAPI] getFaceSketchDetail 异常:', error);
+      return null;
+    }
   }
-
-  // ========== 洞身素描 ==========
-  
 
   // ========== 综合结论 ==========
   
@@ -911,7 +1106,29 @@ class RealAPIService {
   async getTunnels(): Promise<Tunnel[]> {
     const bidData = await this.getBidSectionList();
     console.log('🔍 [realAPI] getTunnels - bidData:', bidData);
-    const tunnels = this.convertBidSectionsToTunnels(bidData);
+    console.log('🔍 [realAPI] getTunnels - bidData类型:', typeof bidData);
+    console.log('🔍 [realAPI] getTunnels - bidData是否为数组:', Array.isArray(bidData));
+    
+    // 如果bidData是数组，说明getBidSectionList返回了原始数组，需要包装
+    let processedData = bidData;
+    if (Array.isArray(bidData)) {
+      console.log('🔍 [realAPI] getTunnels - 检测到原始数组，进行包装');
+      // 将原始数组转换为期望的格式
+      const bdVOList = bidData.map((item: any) => ({
+        bd: {
+          bdPk: item.bdID,
+          bdname: item.bdname,
+          bdcode: item.bdcode,
+          xmId: item.xmID,
+          xmname: item.xmname,
+          xmcode: item.xmcode
+        }
+      }));
+      processedData = { bdVOList, resultcode: 200 };
+      console.log('🔍 [realAPI] getTunnels - 包装后的数据:', processedData);
+    }
+    
+    const tunnels = this.convertBidSectionsToTunnels(processedData);
     console.log('🔍 [realAPI] getTunnels - 转换后的隧道列表:', tunnels);
     return tunnels;
   }
@@ -929,98 +1146,175 @@ class RealAPIService {
   }
 
   /**
-   * 获取指定隧道的工点列表（从标段->工作位->工点层级提取）
+   * 获取指定隧道的工点列表（使用新的API结构）
    */
   async getWorkPoints(tunnelId: string): Promise<WorkPoint[]> {
-    const bidData = await this.getBidSectionList();
-    if (!bidData || !bidData.bdVOList) {
-      return [];
-    }
-
-    const workPoints: WorkPoint[] = [];
-    
-    // 在标段列表中查找对应的标段（tunnelId对应bdPk）
-    const targetBd = bidData.bdVOList.find((bdVO: any) => String(bdVO.bd.bdPk) === tunnelId);
-    if (!targetBd || !targetBd.gzwVOList) {
-      return [];
-    }
-
-    // 遍历工作位列表，提取所有工点
-    targetBd.gzwVOList.forEach((gzwVO: any) => {
-      if (gzwVO.siteVOList) {
-        gzwVO.siteVOList.forEach((siteVO: any) => {
-          const workPoint = this.convertSiteToWorkPoint(siteVO.site, gzwVO.gzw.gzwPk);
-          workPoints.push(workPoint);
-        });
+    try {
+      console.log('🚀 [realAPI] getWorkPoints 获取工点列表, tunnelId:', tunnelId);
+      
+      // 使用新的API获取标段和工点信息
+      const response = await this.getBidSectionAndWorkPoints(tunnelId);
+      
+      // 检查不同的响应格式
+      let bdData = null;
+      
+      if (response && response.resultcode === 200 && response.data) {
+        // 标准响应格式
+        bdData = response.data;
+        console.log('🔍 [realAPI] getWorkPoints 标准响应格式');
+      } else if (response && response.bdId && response.bdInfoVO) {
+        // 直接返回数据格式
+        bdData = response;
+        console.log('🔍 [realAPI] getWorkPoints 直接数据格式');
+      } else if (response && typeof response === 'object') {
+        // 尝试直接使用response
+        bdData = response;
+        console.log('🔍 [realAPI] getWorkPoints 尝试直接使用response');
       }
-    });
+      
+      if (!bdData) {
+        console.log('⚠️ [realAPI] getWorkPoints 没有获取到有效数据');
+        return [];
+      }
 
-    return workPoints;
+      const workPoints: WorkPoint[] = [];
+      
+      console.log('🔍 [realAPI] getWorkPoints bdData:', bdData);
+      
+      // 遍历工作位信息 (bdInfoVO -> GzwInfoVO[])
+      if (bdData.bdInfoVO && Array.isArray(bdData.bdInfoVO)) {
+        console.log('🔍 [realAPI] getWorkPoints bdInfoVO数量:', bdData.bdInfoVO.length);
+        
+        bdData.bdInfoVO.forEach((gzwInfo: any, gzwIndex: number) => {
+          console.log(`🔍 [realAPI] getWorkPoints 处理工作位 ${gzwIndex}:`, {
+            gzwname: gzwInfo.gzwname,
+            gzwID: gzwInfo.gzwID,
+            gzwInfoVO_length: gzwInfo.gzwInfoVO?.length
+          });
+          
+          // 遍历工点信息 (gzwInfoVO -> SiteInfoVO[])
+          if (gzwInfo.gzwInfoVO && Array.isArray(gzwInfo.gzwInfoVO)) {
+            gzwInfo.gzwInfoVO.forEach((siteInfo: any, siteIndex: number) => {
+              console.log(`🔍 [realAPI] getWorkPoints 处理工点 ${gzwIndex}-${siteIndex}:`, {
+                sitename: siteInfo.sitename,
+                sitecode: siteInfo.sitecode,
+                siteId: siteInfo.siteId,
+                startKilo: siteInfo.startKilo,
+                stopKilo: siteInfo.stopKilo,
+                useflag: siteInfo.useflag
+              });
+              
+              const workPoint: WorkPoint = {
+                id: siteInfo.siteId || String(Math.random()),
+                name: siteInfo.sitename || '未知工点',
+                code: siteInfo.sitecode || '',
+                tunnelId: tunnelId,
+                mileage: parseFloat(siteInfo.startKilo) || 0,
+                length: (parseFloat(siteInfo.stopKilo) || 0) - (parseFloat(siteInfo.startKilo) || 0),
+                riskLevel: 'medium', // 默认风险等级
+                status: siteInfo.useflag === '1' ? 'active' : 'inactive',
+                createdAt: new Date().toISOString()
+              };
+              
+              workPoints.push(workPoint);
+            });
+          } else {
+            console.log(`⚠️ [realAPI] getWorkPoints 工作位 ${gzwIndex} 没有工点信息或格式错误:`, gzwInfo.gzwInfoVO);
+          }
+        });
+      } else {
+        console.log('⚠️ [realAPI] getWorkPoints bdData没有bdInfoVO或格式错误:', bdData.bdInfoVO);
+      }
+
+      console.log('🔍 [realAPI] getWorkPoints 转换后的工点列表:', workPoints);
+      return workPoints;
+      
+    } catch (error) {
+      console.error('❌ [realAPI] getWorkPoints 异常:', error);
+      return [];
+    }
   }
 
   /**
    * 搜索工点
    */
   async searchWorkPoints(keyword: string, tunnelId?: string): Promise<WorkPoint[]> {
-    const bidData = await this.getBidSectionList();
-    if (!bidData || !bidData.bdVOList) {
+    try {
+      console.log('🚀 [realAPI] searchWorkPoints 搜索工点, keyword:', keyword, 'tunnelId:', tunnelId);
+      
+      // 如果指定了tunnelId，只在该隧道中搜索
+      if (tunnelId) {
+        const workPoints = await this.getWorkPoints(tunnelId);
+        return workPoints.filter(wp => 
+          wp.name.includes(keyword) || 
+          wp.code.includes(keyword) ||
+          wp.id.includes(keyword)
+        );
+      }
+      
+      // 否则在所有隧道中搜索
+      const bidData = await this.getBidSectionList();
+      if (!bidData || !bidData.bdVOList) {
+        return [];
+      }
+      
+      const allWorkPoints: WorkPoint[] = [];
+      
+      // 遍历所有标段获取工点
+      for (const bdVO of bidData.bdVOList) {
+        try {
+          const workPoints = await this.getWorkPoints(bdVO.bd.bdPk);
+          const filteredPoints = workPoints.filter(wp => 
+            wp.name.includes(keyword) || 
+            wp.code.includes(keyword) ||
+            wp.id.includes(keyword)
+          );
+          allWorkPoints.push(...filteredPoints);
+        } catch (error) {
+          console.error('❌ [realAPI] searchWorkPoints 获取标段工点失败:', bdVO.bd.bdPk, error);
+        }
+      }
+      
+      return allWorkPoints;
+      
+    } catch (error) {
+      console.error('❌ [realAPI] searchWorkPoints 异常:', error);
       return [];
     }
-
-    const workPoints: WorkPoint[] = [];
-    const lowerKeyword = keyword.toLowerCase();
-
-    bidData.bdVOList.forEach((bdVO: any) => {
-      // 如果指定了tunnelId，只搜索该标段
-      if (tunnelId && String(bdVO.bd.bdPk) !== tunnelId) {
-        return;
-      }
-
-      if (bdVO.gzwVOList) {
-        bdVO.gzwVOList.forEach((gzwVO: any) => {
-          if (gzwVO.siteVOList) {
-            gzwVO.siteVOList.forEach((siteVO: any) => {
-              const site = siteVO.site;
-              if (
-                site.sitename.toLowerCase().includes(lowerKeyword) ||
-                site.sitecode.toLowerCase().includes(lowerKeyword)
-              ) {
-                const workPoint = this.convertSiteToWorkPoint(site, gzwVO.gzw.gzwPk);
-                workPoints.push(workPoint);
-              }
-            });
-          }
-        });
-      }
-    });
-
-    return workPoints;
   }
 
   /**
    * 根据ID获取工点详情
    */
   async getWorkPointById(workPointId: string): Promise<WorkPoint> {
-    const bidData = await this.getBidSectionList();
-    if (!bidData || !bidData.bdVOList) {
-      throw new Error(`WorkPoint not found: ${workPointId}`);
-    }
+    try {
+      console.log('🚀 [realAPI] getWorkPointById 获取工点详情, workPointId:', workPointId);
+      
+      // 获取所有标段
+      const bidData = await this.getBidSectionList();
+      if (!bidData || !bidData.bdVOList) {
+        throw new Error(`WorkPoint not found: ${workPointId}`);
+      }
 
-    for (const bdVO of bidData.bdVOList) {
-      if (bdVO.gzwVOList) {
-        for (const gzwVO of bdVO.gzwVOList) {
-          if (gzwVO.siteVOList) {
-            for (const siteVO of gzwVO.siteVOList) {
-              if (String(siteVO.site.sitePk) === workPointId) {
-                return this.convertSiteToWorkPoint(siteVO.site, gzwVO.gzw.gzwPk);
-              }
-            }
+      // 遍历所有标段查找工点
+      for (const bdVO of bidData.bdVOList) {
+        try {
+          const workPoints = await this.getWorkPoints(bdVO.bd.bdPk);
+          const workPoint = workPoints.find(wp => wp.id === workPointId);
+          if (workPoint) {
+            console.log('🔍 [realAPI] getWorkPointById 找到工点:', workPoint);
+            return workPoint;
           }
+        } catch (error) {
+          console.error('❌ [realAPI] getWorkPointById 获取标段工点失败:', bdVO.bd.bdPk, error);
         }
       }
-    }
 
-    throw new Error(`WorkPoint not found: ${workPointId}`);
+      throw new Error(`WorkPoint not found: ${workPointId}`);
+    } catch (error) {
+      console.error('❌ [realAPI] getWorkPointById 异常:', error);
+      throw error;
+    }
   }
 
   /**
@@ -1099,9 +1393,35 @@ class RealAPIService {
     endDate?: string;
   }): Promise<{ list: ForecastDesignRecord[]; total: number }> {
     try {
+      // 尝试获取实际的工点ID
+      let siteId = '1'; // 默认值
+      
+      try {
+        // 获取第一个可用的工点ID
+        const bidData = await this.getBidSectionList();
+        if (bidData?.bdVOList?.length > 0) {
+          const firstBd = bidData.bdVOList[0];
+          const bdId = firstBd.bd.bdPk;
+          
+          // 获取该标段的工点信息
+          const workPointData = await this.getBidSectionAndWorkPoints(bdId);
+          if (workPointData?.bdInfoVO?.length > 0) {
+            const firstGzw = workPointData.bdInfoVO[0];
+            if (firstGzw.gzwInfoVO?.length > 0) {
+              const firstSite = firstGzw.gzwInfoVO[0];
+              siteId = firstSite.siteId || '1';
+              console.log('🔍 [realAPI] 使用实际工点ID:', siteId);
+            }
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ [realAPI] 获取实际工点ID失败，使用默认值:', error);
+      }
+      
       // 调用后端接口
       const backendParams: any = {
-        currentPage: params.page,
+        siteId: siteId,
+        pageNum: params.page,
         pageSize: params.pageSize,
       };
       
@@ -1110,13 +1430,30 @@ class RealAPIService {
         backendParams.method = params.method;
       }
       
-      // 调用后端 /api/sjyb/list
+      // 调用后端 /api/v1/sjyb/list
       const response = await this.getDesignForecastList(backendParams);
       
       console.log('🔍 [realAPI] getForecastDesigns 原始响应:', response);
-      console.log('🔍 [realAPI] sjybIPage:', response?.sjybIPage);
+      console.log('🔍 [realAPI] response.resultcode:', response?.resultcode);
+      console.log('🔍 [realAPI] response.message:', response?.message);
+      console.log('🔍 [realAPI] response.data:', response?.data);
+      console.log('🔍 [realAPI] response.data.sjybIPage:', response?.data?.sjybIPage);
       
-      // 后端返回格式: { sjybIPage: { records: [...], total: number } }
+      // 详细显示sjybIPage的内容
+      if (response?.sjybIPage) {
+        const sjybIPage = response.sjybIPage;
+        console.log('🔍 [realAPI] sjybIPage.records:', sjybIPage.records);
+        console.log('🔍 [realAPI] sjybIPage.total:', sjybIPage.total);
+        console.log('🔍 [realAPI] sjybIPage.current:', sjybIPage.current);
+        console.log('🔍 [realAPI] sjybIPage.size:', sjybIPage.size);
+        
+        // 如果有records，显示第一条记录的详细信息
+        if (sjybIPage.records && sjybIPage.records.length > 0) {
+          console.log('🔍 [realAPI] 第一条记录详情:', sjybIPage.records[0]);
+        }
+      }
+      
+      // HTTP拦截器已经提取了data，实际响应格式: { sjybIPage: { records: [...], total: number } }
       const page = response?.sjybIPage || {};
       const backendList: DesignForecast[] = page.records || [];
       const total = page.total || 0;
@@ -1304,7 +1641,10 @@ class RealAPIService {
    */
   async getDesignRockGrades(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
     try {
-      const response = await get<BaseResponse<{ sjwydjIPage: PageResponse<DesignRockGrade> }>>('/api/v1/sjwydj/list', {
+      console.log('🚀 [realAPI] getDesignRockGrades 调用API: /api/v1/sjwydj/list');
+      console.log('🔍 [realAPI] 请求参数:', params);
+      
+      const response = await get<any>('/api/v1/sjwydj/list', {
         params: {
           userid: params.userid || this.userId,
           pageNum: params.pageNum || 1,
@@ -1312,7 +1652,16 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.sjwydjIPage;
+      
+      console.log('🔍 [realAPI] getDesignRockGrades 原始响应:', response);
+      console.log('🔍 [realAPI] response.sjwydjIPage:', response?.sjwydjIPage);
+      
+      // HTTP拦截器已经提取了data，实际响应格式: { sjwydjIPage: { records: [...], total: number } }
+      const sjwydjIPage = response?.sjwydjIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      
+      console.log('🔍 [realAPI] 解析后的sjwydjIPage:', sjwydjIPage);
+      
+      return sjwydjIPage;
     } catch (error) {
       console.error('❌ [realAPI] getDesignRockGrades 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -1325,7 +1674,7 @@ class RealAPIService {
   async getDesignRockGradeById(id: string) {
     try {
       const response = await get<BaseResponse<{ sjwydj: DesignRockGrade }>>(`/api/v1/sjwydj/${id}`);
-      return response.data.sjwydj;
+      return response.data?.sjwydj;
     } catch (error) {
       console.error('❌ [realAPI] getDesignRockGradeById 失败:', error);
       throw error;
@@ -1412,7 +1761,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.sjdzIPage;
+      return response.data?.sjdzIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getDesignGeologies 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -1556,7 +1905,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.wtfIPage;
+      return response.data?.wtfIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getGeophysicalMethods 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -1585,21 +1934,218 @@ class RealAPIService {
 
   /**
    * 更新物探法记录
+   * @param id 记录ID
+   * @param data 更新数据
+   * @param method 预报方法 (1=TSP, 2=HSP, 3=LDSN, 4=DCBFS, 5=GFBZLD, 6=SBDC, 7=WZJC)
    */
-  async updateGeophysicalMethod(id: string, data: GeophysicalRequest): Promise<{ success: boolean }> {
+  async updateGeophysicalMethod(id: string, data: GeophysicalRequest, method?: string | null): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await put<BaseResponse>(`/api/v1/wtf/${id}`, data);
+      // 根据method参数确定API路径
+      let apiPath = `/api/v1/wtf/${id}`;
       
-      if (response.resultcode === 200) {
+      // 根据不同的预报方法使用不同的API端点
+      if (method) {
+        const methodNum = parseInt(method);
+        switch (methodNum) {
+          case 1: // TSP - 地震波反射
+            apiPath = `/api/v1/wtf/tsp/${id}`;
+            break;
+          case 2: // HSP - 水平声波剖面
+            apiPath = `/api/v1/wtf/hsp/${id}`;
+            break;
+          case 3: // LDSN - 陆地声呐
+            apiPath = `/api/v1/wtf/ldsn/${id}`;
+            break;
+          case 4: // DCBFS - 电磁波反射
+            apiPath = `/api/v1/wtf/dcbfs/${id}`;
+            break;
+          case 5: // GFBZLD - 高分辨直流电
+            apiPath = `/api/v1/wtf/gfbzld/${id}`;
+            break;
+          case 6: // SBDC - 瞬变电磁
+            apiPath = `/api/v1/wtf/sbdc/${id}`;
+            break;
+          case 7: // WZJC - 微震监测
+            apiPath = `/api/v1/wtf/wzjc/${id}`;
+            break;
+          default:
+            console.warn('⚠️ [realAPI] 未知的预报方法:', method, '使用通用API');
+        }
+      }
+      
+      console.log('🔄 [realAPI] updateGeophysicalMethod API路径:', apiPath);
+      console.log('🔄 [realAPI] updateGeophysicalMethod 接收到的 data 列表:', {
+        ybjgDTOList: (data as any).ybjgDTOList?.length,
+        tspPddataDTOList: (data as any).tspPddataDTOList?.length,
+        tspBxdataDTOList: (data as any).tspBxdataDTOList?.length,
+        ybjgVOList: (data as any).ybjgVOList?.length,
+        tspPddataVOList: (data as any).tspPddataVOList?.length,
+        tspBxdataVOList: (data as any).tspBxdataVOList?.length
+      });
+      
+      // 清理数据：移除VO后缀的字段（这些是查询返回的，不应该在更新时发送）
+      const cleanData: any = { ...data };
+      
+      // 将VO字段转换为DTO字段
+      if (cleanData.ybjgVOList) {
+        cleanData.ybjgDTOList = cleanData.ybjgVOList;
+        delete cleanData.ybjgVOList;
+      }
+      if (cleanData.tspBxdataVOList) {
+        cleanData.tspBxdataDTOList = cleanData.tspBxdataVOList;
+        delete cleanData.tspBxdataVOList;
+      }
+      if (cleanData.tspPddataVOList) {
+        cleanData.tspPddataDTOList = cleanData.tspPddataVOList;
+        delete cleanData.tspPddataVOList;
+      }
+      
+      // 移除可能导致问题的时间戳字段
+      delete cleanData.gmtCreate;
+      delete cleanData.gmtModified;
+      delete cleanData.createdate; // 创建时间不应该在更新时修改
+      
+      // 深度清理函数：移除对象中的时间戳字段
+      const deepClean = (obj: any) => {
+        if (Array.isArray(obj)) {
+          obj.forEach(item => deepClean(item));
+        } else if (typeof obj === 'object' && obj !== null) {
+          delete obj.gmtCreate;
+          delete obj.gmtModified;
+          delete obj.createdate;
+          
+          // 递归处理属性
+          Object.keys(obj).forEach(key => {
+            if (typeof obj[key] === 'object') {
+              deepClean(obj[key]);
+            }
+          });
+        }
+      };
+      
+      // 关键修复：在删除之前先保存列表数据
+      console.log('🔍 [realAPI] cleanData 中的列表字段:', {
+        ybjgDTOList: cleanData.ybjgDTOList?.length,
+        tspPddataDTOList: cleanData.tspPddataDTOList?.length,
+        tspBxdataDTOList: cleanData.tspBxdataDTOList?.length,
+        ybjgVOList: cleanData.ybjgVOList?.length,
+        tspPddataVOList: cleanData.tspPddataVOList?.length,
+        tspBxdataVOList: cleanData.tspBxdataVOList?.length
+      });
+      
+      // 优先使用 DTOList（前端传来的），如果没有再使用 VOList（后端返回的）
+      const savedLists = {
+        ybjgDTOList: cleanData.ybjgDTOList || cleanData.ybjgVOList || [],
+        tspPddataDTOList: cleanData.tspPddataDTOList || cleanData.tspPddataVOList || [],
+        tspBxdataDTOList: cleanData.tspBxdataDTOList || cleanData.tspBxdataVOList || []
+      };
+
+      console.log('📋 [realAPI] 保存的列表数据:', {
+        ybjgDTOList: savedLists.ybjgDTOList.length,
+        tspPddataDTOList: savedLists.tspPddataDTOList.length,
+        tspBxdataDTOList: savedLists.tspBxdataDTOList.length
+      });
+
+      // 移除子列表字段（避免重复）
+      delete cleanData.ybjgVOList;
+      delete cleanData.tspBxdataVOList;
+      delete cleanData.tspPddataVOList;
+      delete cleanData.ybjgDTOList;
+      delete cleanData.tspBxdataDTOList;
+      delete cleanData.tspPddataDTOList;
+
+      // 移除图片字段（定义为binary，可能导致JSON解析错误）
+      delete cleanData.pic1;
+      delete cleanData.pic2;
+      delete cleanData.pic3;
+      delete cleanData.pic4;
+      delete cleanData.pic5;
+      delete cleanData.pic6;
+
+      // 彻底重构数据对象，而不是在原对象上修补
+      // 根据 TspDTO 定义手动构建
+      const safeData: any = {
+        ybPk: Number(cleanData.ybPk),
+        ybId: cleanData.ybId ? Number(cleanData.ybId) : undefined,
+        siteId: String(cleanData.siteId),
+        method: Number(cleanData.method),
+        
+        // 文本字段，确保非 null
+        dkname: cleanData.dkname || '',
+        dkilo: cleanData.dkilo !== undefined ? Number(cleanData.dkilo) : 0,
+        ybLength: cleanData.ybLength !== undefined ? Number(cleanData.ybLength) : 0,
+        
+        testname: cleanData.testname || '',
+        monitorname: cleanData.monitorname || '',
+        supervisorname: cleanData.supervisorname || '',
+        
+        conclusionyb: cleanData.conclusionyb || '',
+        suggestion: cleanData.suggestion || '',
+        
+        // 状态字段
+        flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
+        submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
+        
+        // TSP 特有字段
+        tspPk: cleanData.tspPk ? Number(cleanData.tspPk) : undefined,
+        tspId: cleanData.tspId || '',
+        
+        // 其他可能需要的字段，给个默认值
+        jfpknum: cleanData.jfpknum || 0,
+        jfpksd: cleanData.jfpksd || 0,
+        jfpkzj: cleanData.jfpkzj || 0,
+        
+        // 日期
+        monitordate: cleanData.monitordate ? 
+          (cleanData.monitordate.includes(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate) 
+          : undefined,
+
+        // 子列表 - 使用之前保存的数据
+        ybjgDTOList: savedLists.ybjgDTOList,
+        tspPddataDTOList: savedLists.tspPddataDTOList,
+        tspBxdataDTOList: savedLists.tspBxdataDTOList,
+      };
+
+      console.log('🔄 [realAPI] updateGeophysicalMethod 发送重构数据:', JSON.stringify(safeData, null, 2));
+      const response = await put<BaseResponse>(apiPath, safeData);
+      
+      // 打印完整响应结构用于调试
+      console.log('📥 [realAPI] updateGeophysicalMethod 收到响应:', {
+        response,
+        type: typeof response,
+        keys: response ? Object.keys(response) : [],
+        resultcode: response?.resultcode,
+        message: response?.message,
+        data: response?.data
+      });
+      
+      // 兼容多种响应格式
+      // 1. 标准格式: { resultcode: 200/0, message: '...', data: {...} }
+      // 2. 简化格式: { resultcode: 200/0 }
+      // 3. 直接返回数据对象
+      if (response && (response.resultcode === 200 || response.resultcode === 0)) {
         console.log('✅ [realAPI] updateGeophysicalMethod 成功');
         return { success: true };
+      } else if (!response || typeof response !== 'object') {
+        // 如果响应为空或不是对象，可能是成功但没有返回体
+        console.log('✅ [realAPI] updateGeophysicalMethod 成功（无响应体）');
+        return { success: true };
       } else {
-        console.error('❌ [realAPI] updateGeophysicalMethod 失败:', response.message);
-        return { success: false };
+        console.error('❌ [realAPI] updateGeophysicalMethod 失败:', {
+          resultcode: response.resultcode,
+          message: response.message,
+          fullResponse: response
+        });
+        return { success: false, message: response.message || response.msg || '更新失败' };
       }
-    } catch (error) {
-      console.error('❌ [realAPI] updateGeophysicalMethod 异常:', error);
-      return { success: false };
+    } catch (error: any) {
+      console.error('❌ [realAPI] updateGeophysicalMethod 异常:', {
+        error,
+        message: error?.message,
+        response: error?.response,
+        responseData: error?.response?.data
+      });
+      return { success: false, message: error?.response?.data?.message || error?.message || '网络异常' };
     }
   }
 
@@ -1638,7 +2184,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.ztfIPage;
+      return response.data?.ztfIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getDrillingMethods 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -1668,7 +2214,7 @@ class RealAPIService {
   /**
    * 更新钻探法记录
    */
-  async updateDrillingMethod(id: string, data: DrillingRequest): Promise<{ success: boolean }> {
+  async updateDrillingMethod(id: string, data: DrillingRequest): Promise<{ success: boolean; message?: string }> {
     try {
       const response = await put<BaseResponse>(`/api/v1/ztf/${id}`, data);
       
@@ -1677,11 +2223,11 @@ class RealAPIService {
         return { success: true };
       } else {
         console.error('❌ [realAPI] updateDrillingMethod 失败:', response.message);
-        return { success: false };
+        return { success: false, message: response.message || '更新失败' };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [realAPI] updateDrillingMethod 异常:', error);
-      return { success: false };
+      return { success: false, message: error?.message || '网络异常' };
     }
   }
 
@@ -1720,7 +2266,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.zzmsmIPage;
+      return response.data?.zzmsmIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getFaceSketches 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -1750,7 +2296,7 @@ class RealAPIService {
   /**
    * 更新掌子面素描记录
    */
-  async updateFaceSketch(id: string, data: FaceSketchRequest): Promise<{ success: boolean }> {
+  async updateFaceSketch(id: string, data: FaceSketchRequest): Promise<{ success: boolean; message?: string }> {
     try {
       const response = await put<BaseResponse>(`/api/v1/zzmsm/${id}`, data);
       
@@ -1759,11 +2305,11 @@ class RealAPIService {
         return { success: true };
       } else {
         console.error('❌ [realAPI] updateFaceSketch 失败:', response.message);
-        return { success: false };
+        return { success: false, message: response.message || '更新失败' };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [realAPI] updateFaceSketch 异常:', error);
-      return { success: false };
+      return { success: false, message: error?.message || '网络异常' };
     }
   }
 
@@ -1802,7 +2348,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.dssmIPage;
+      return response.data?.dssmIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getTunnelSketches 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -1832,7 +2378,7 @@ class RealAPIService {
   /**
    * 更新洞身素描记录
    */
-  async updateTunnelSketch(id: string, data: TunnelSketchRequest): Promise<{ success: boolean }> {
+  async updateTunnelSketch(id: string, data: TunnelSketchRequest): Promise<{ success: boolean; message?: string }> {
     try {
       const response = await put<BaseResponse>(`/api/v1/dssm/${id}`, data);
       
@@ -1841,11 +2387,11 @@ class RealAPIService {
         return { success: true };
       } else {
         console.error('❌ [realAPI] updateTunnelSketch 失败:', response.message);
-        return { success: false };
+        return { success: false, message: response.message || '更新失败' };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [realAPI] updateTunnelSketch 异常:', error);
-      return { success: false };
+      return { success: false, message: error?.message || '网络异常' };
     }
   }
 
@@ -1884,7 +2430,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data.dbbcIPage;
+      return response.data?.dbbcIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getSurfaceSupplements 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2027,35 +2573,45 @@ class RealAPIService {
     return gradeMap[grade] || 'IV';
   }
 
-  // ========== 五种预报方法 ==========
+  // ========== 地质预报数据查询（5大类） ==========
 
   /**
-   * 获取物探法列表
+   * 获取物探法展示数据（地质预报-物探）
+   * @param params 查询参数
+   * @returns 物探法数据列表（分页）
    */
-  async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+  async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId: string }): Promise<PageResponse<any>> {
     try {
       console.log('🚀 [realAPI] getGeophysicalList 调用参数:', params);
       
-      const response = await get<any>('/api/v1/wtf/list', {
-        params: {
-          'queryDTO.pageNum': params.pageNum,
-          'queryDTO.pageSize': params.pageSize,
-          'queryDTO.siteId': params.siteId || '1',
-          'queryDTO.type': 1,  // 预报类型：物探法
-          'queryDTO.submitFlag': 1  // 提交标志：已提交
-        }
-      });
+      // 强制要求siteId必传，避免使用错误的默认值
+      if (!params.siteId) {
+        console.error('❌ [realAPI] getGeophysicalList siteId 是必填参数');
+        return { records: [], total: 0, current: 1, size: 10, pages: 0 };
+      }
       
+      const queryParams = {
+        siteId: params.siteId,  // 必填，不使用默认值
+        type: 1,                // 1=物探法
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 15
+      };
+      /*  */
+      console.log('📤 [realAPI] 物探法请求参数:', queryParams);
+      
+      // 恢复为标准的GET请求，通过Query参数传递
+      const response = await get<any>('/api/v1/wtf/list', { params: queryParams });
       console.log('🔍 [realAPI] getGeophysicalList 响应:', response);
-      console.log('📊 [realAPI] 响应数据详情:', {
-        resultcode: response.resultcode,
-        hasData: !!response.data,
-        dataType: typeof response.data,
-        records: response.data?.records?.length || 0
-      });
       
-      if (response.resultcode === 200 && response.data) {
-        const pageData = response.data;
+      // 兼容处理：如果response直接是Page对象（已被拦截器处理过），或者包含resultcode
+      let pageData = null;
+      if (response && (response.records || Array.isArray(response.records))) {
+         pageData = response;
+      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+         pageData = response.data;
+      }
+
+      if (pageData) {
         return {
           records: pageData.records || [],
           total: pageData.total || 0,
@@ -2064,32 +2620,46 @@ class RealAPIService {
           pages: pageData.pages || 1
         };
       }
-      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+      console.warn('⚠️ [realAPI] 响应码非200或无数据:', response);
+      return { records: [], total: 0, current: 1, size: 10, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getGeophysicalList 异常:', error);
-      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+      return { records: [], total: 0, current: 1, size: 10, pages: 0 };
     }
   }
 
   /**
-   * 获取掌子面素描列表
+   * 获取掌子面素描数据（地质预报-掌子面素描）
    */
-  async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+  async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId: string }): Promise<PageResponse<any>> {
     try {
-      const response = await get<any>('/api/v1/zzmsm/list', {
-        params: {
-          'queryDTO.pageNum': params.pageNum,
-          'queryDTO.pageSize': params.pageSize,
-          'queryDTO.siteId': params.siteId || '1',
-          'queryDTO.type': 2,  // 预报类型：掌子面素描
-          'queryDTO.submitFlag': 1
-        }
-      });
+      if (!params.siteId) {
+        console.error('❌ [realAPI] getPalmSketchList siteId 是必填参数');
+        return { records: [], total: 0, current: 1, size: 10, pages: 0 };
+      }
       
+      const queryParams = {
+        siteId: params.siteId,
+        type: 2,  // 2=掌子面素描
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 15
+      };
+      
+      console.log('🚀 [realAPI] getPalmSketchList 调用参数:', params);
+      console.log('📤 [realAPI] 掌子面素描请求参数:', queryParams);
+      
+      const response = await get<any>('/api/v1/zzmsm/list', { params: queryParams });
       console.log('🔍 [realAPI] getPalmSketchList 响应:', response);
       
-      if (response.resultcode === 200 && response.data) {
-        const pageData = response.data;
+      // 兼容处理
+      let pageData = null;
+      if (response && (response.records || Array.isArray(response.records))) {
+         pageData = response;
+      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+         pageData = response.data;
+      }
+
+      if (pageData) {
         return {
           records: pageData.records || [],
           total: pageData.total || 0,
@@ -2106,24 +2676,37 @@ class RealAPIService {
   }
 
   /**
-   * 获取洞身素描列表
+   * 获取洞身素描数据（地质预报-洞身素描）
    */
-  async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+  async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId: string }): Promise<PageResponse<any>> {
     try {
-      const response = await get<any>('/api/v1/dssm/list', {
-        params: {
-          'queryDTO.pageNum': params.pageNum,
-          'queryDTO.pageSize': params.pageSize,
-          'queryDTO.siteId': params.siteId || '1',
-          'queryDTO.type': 3,  // 预报类型：洞身素描
-          'queryDTO.submitFlag': 1
-        }
-      });
+      if (!params.siteId) {
+        console.error('❌ [realAPI] getTunnelSketchList siteId 是必填参数');
+        return { records: [], total: 0, current: 1, size: 10, pages: 0 };
+      }
       
+      const queryParams = {
+        siteId: params.siteId,
+        type: 3,  // 3=洞身素描
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 15
+      };
+      
+      console.log('🚀 [realAPI] getTunnelSketchList 调用参数:', params);
+      console.log('📤 [realAPI] 洞身素描请求参数:', queryParams);
+      
+      const response = await get<any>('/api/v1/dssm/list', { params: queryParams });
       console.log('🔍 [realAPI] getTunnelSketchList 响应:', response);
       
-      if (response.resultcode === 200 && response.data) {
-        const pageData = response.data;
+      // 兼容处理
+      let pageData = null;
+      if (response && (response.records || Array.isArray(response.records))) {
+         pageData = response;
+      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+         pageData = response.data;
+      }
+
+      if (pageData) {
         return {
           records: pageData.records || [],
           total: pageData.total || 0,
@@ -2140,24 +2723,37 @@ class RealAPIService {
   }
 
   /**
-   * 获取钻探法列表
+   * 获取钻探数据（地质预报-钻探）
    */
-  async getDrillingList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
+  async getDrillingList(params: { pageNum: number; pageSize: number; siteId: string }): Promise<PageResponse<any>> {
     try {
-      const response = await get<any>('/api/v1/ztf/list', {
-        params: {
-          'queryDTO.pageNum': params.pageNum,
-          'queryDTO.pageSize': params.pageSize,
-          'queryDTO.siteId': params.siteId || '1',
-          'queryDTO.type': 4,  // 预报类型：钻探法
-          'queryDTO.submitFlag': 1
-        }
-      });
+      if (!params.siteId) {
+        console.error('❌ [realAPI] getDrillingList siteId 是必填参数');
+        return { records: [], total: 0, current: 1, size: 10, pages: 0 };
+      }
       
+      const queryParams = {
+        siteId: params.siteId,
+        type: 4,  // 4=钻探法
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 15
+      };
+      
+      console.log('🚀 [realAPI] getDrillingList 调用参数:', params);
+      console.log('📤 [realAPI] 钻探请求参数:', queryParams);
+      
+      const response = await get<any>('/api/v1/ztf/list', { params: queryParams });
       console.log('🔍 [realAPI] getDrillingList 响应:', response);
       
-      if (response.resultcode === 200 && response.data) {
-        const pageData = response.data;
+      // 兼容处理
+      let pageData = null;
+      if (response && (response.records || Array.isArray(response.records))) {
+         pageData = response;
+      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+         pageData = response.data;
+      }
+
+      if (pageData) {
         return {
           records: pageData.records || [],
           total: pageData.total || 0,
@@ -2174,18 +2770,65 @@ class RealAPIService {
   }
 
   /**
-   * 获取地表补充信息
+   * 获取地表补充数据（地质预报-地表补充）
+   */
+  async getSurfaceSupplementList(params: { pageNum: number; pageSize: number; siteId: string }): Promise<PageResponse<any>> {
+    try {
+      if (!params.siteId) {
+        console.error('❌ [realAPI] getSurfaceSupplementList siteId 是必填参数');
+        return { records: [], total: 0, current: 1, size: 10, pages: 0 };
+      }
+      
+      const queryParams = {
+        siteId: params.siteId,
+        type: 5,  // 5=地表补充
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 15
+      };
+      
+      console.log('🚀 [realAPI] getSurfaceSupplementList 调用参数:', params);
+      console.log('📤 [realAPI] 地表补充请求参数:', queryParams);
+      
+      const response = await get<any>('/api/v1/dbbc/list', { params: queryParams });
+      console.log('🔍 [realAPI] getSurfaceSupplementList 响应:', response);
+      
+      // 兼容处理
+      let pageData = null;
+      if (response && (response.records || Array.isArray(response.records))) {
+         pageData = response;
+      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+         pageData = response.data;
+      }
+
+      if (pageData) {
+        return {
+          records: pageData.records || [],
+          total: pageData.total || 0,
+          current: pageData.current || 1,
+          size: pageData.size || 10,
+          pages: pageData.pages || 1
+        };
+      }
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    } catch (error) {
+      console.error('❌ [realAPI] getSurfaceSupplementList 异常:', error);
+      return { records: [], total: 0, current: 1, size: 10, pages: 1 };
+    }
+  }
+
+  /**
+   * 获取地表补充信息（单个记录）
    */
   async getSurfaceSupplementInfo(ybPk: string): Promise<any> {
     try {
       const response = await get<any>(`/api/v1/dbbc/${ybPk}`);
       
-      if (response.resultcode === 200) {
+      if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
         return response.data;
       }
       return null;
     } catch (error) {
-      console.error(' [realAPI] getSurfaceSupplementInfo 异常:', error);
+      console.error(' [realAPI] getSurfaceSupplementInfo ', error);
       return null;
     }
   }
@@ -2225,6 +2868,34 @@ class RealAPIService {
       return null;
     } catch (error) {
       console.error('❌ [realAPI] getTunnelSketchDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取地震波反射详情 (TSP)
+   */
+  async getTspDetail(ybPk: string): Promise<any> {
+    try {
+      console.log('🔍 [realAPI] getTspDetail 请求, ybPk:', ybPk);
+      const response = await get<any>(`/api/v1/wtf/tsp/${ybPk}`);
+      console.log('🔍 [realAPI] getTspDetail 响应:', response);
+      
+      // 处理两种可能的响应格式
+      if (response.resultcode === 200 && response.data) {
+        // 标准格式：{ resultcode: 200, data: {...} }
+        console.log('✅ [realAPI] getTspDetail 成功 (标准格式), 数据:', response.data);
+        return response.data;
+      } else if (response.ybPk || response.tspPk) {
+        // 直接返回数据对象：{ ybPk: ..., tspPk: ..., ... }
+        console.log('✅ [realAPI] getTspDetail 成功 (直接数据), 数据:', response);
+        return response;
+      }
+      
+      console.warn('⚠️ [realAPI] getTspDetail 失败, resultcode:', response.resultcode, 'message:', response.message);
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getTspDetail 异常:', error);
       return null;
     }
   }

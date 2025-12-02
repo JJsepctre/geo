@@ -229,15 +229,22 @@ function HelloPage() {
 
   // 获取工点列表
   const fetchWorkPoints = useCallback(async (tunnelId: string) => {
-    if (!tunnelId) return;
+    if (!tunnelId) {
+      console.log('⚠️ [HelloPage] fetchWorkPoints tunnelId为空，跳过');
+      return;
+    }
     
+    console.log('🚀 [HelloPage] fetchWorkPoints 开始获取工点, tunnelId:', tunnelId);
     setLoadingWorkPoints(true);
     try {
       const workPointsData = await apiAdapter.getWorkPoints(tunnelId);
+      console.log('✅ [HelloPage] fetchWorkPoints 获取到工点数据:', workPointsData);
+      console.log('🔍 [HelloPage] 工点数据长度:', workPointsData?.length);
+      
       setWorkPoints(workPointsData);
       setFilteredWorkPoints(workPointsData);
     } catch (error) {
-      console.error('获取工点列表失败:', error);
+      console.error('❌ [HelloPage] 获取工点列表失败:', error);
       Message.error('获取工点列表失败');
       // 设置默认工点数据
       const defaultWorkPoints: WorkPoint[] = [
@@ -901,7 +908,7 @@ function HelloPage() {
                             <Button
                               type="primary"
                               size="large"
-                              onClick={() => navigate('/forecast/geology')}
+                              onClick={() => navigate(`/forecast/geology/${item.id}`)}
                             >
                               地质预报
                             </Button>
