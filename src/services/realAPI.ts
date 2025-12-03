@@ -948,6 +948,12 @@ class RealAPIService {
       
       // 检查响应格式
       if (response && typeof response === 'object') {
+        // 检查是否是错误响应
+        if (response.resultcode && response.resultcode !== 200 && response.resultcode !== 0) {
+          console.error('❌ [realAPI] getFaceSketchDetail 后端返回错误:', response.resultcode, response.message);
+          throw new Error(response.message || `服务器返回错误: ${response.resultcode}`);
+        }
+        
         // 如果有 resultcode 和 data 字段，返回 data
         if (response.resultcode === 200 && response.data) {
           console.log('✅ [realAPI] getFaceSketchDetail 成功 (标准格式), 数据:', response.data);
@@ -965,8 +971,8 @@ class RealAPIService {
         }
       }
       
-      console.warn('⚠️ [realAPI] getFaceSketchDetail 未知响应格式，返回原始响应:', response);
-      return response;
+      console.warn('⚠️ [realAPI] getFaceSketchDetail 未知响应格式，返回null');
+      return null;
     } catch (error) {
       console.error('❌ [realAPI] getFaceSketchDetail 异常:', error);
       return null;

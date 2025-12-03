@@ -372,13 +372,20 @@ function GeologyForecastPage() {
   }
 
   const handleEdit = (record: any) => {
+    console.log('🔍 [编辑] 完整记录数据:', record);
+    console.log('🔍 [编辑] 记录的所有键:', Object.keys(record));
+    console.log('🔍 [编辑] activeTab:', activeTab);
+    
     // 根据不同类型使用不同的主键字段
     let recordId = '';
     if (activeTab === 'geophysical') {
       // 物探法：优先使用wtfPk，如果没有则使用ybPk
       recordId = String(record.wtfPk || record.ybPk || record.id);
+      console.log('🔍 [编辑] 物探法 - wtfPk:', record.wtfPk, 'ybPk:', record.ybPk, '最终ID:', recordId);
     } else if (activeTab === 'palmSketch') {
+      console.log('🔍 [编辑] 掌子面素描 - zzmsmPk:', record.zzmsmPk, 'ybPk:', record.ybPk, 'id:', record.id);
       recordId = String(record.zzmsmPk || record.ybPk || record.id);
+      console.log('🔍 [编辑] 掌子面素描 - 最终ID:', recordId);
     } else if (activeTab === 'tunnelSketch') {
       recordId = String(record.dssmPk || record.ybPk || record.id);
     } else if (activeTab === 'drilling') {

@@ -90,9 +90,15 @@ function GeologyForecastEditPage() {
              console.log('📥 [编辑页面] 掌子面素描详情数据:', detail);
              if (detail) {
                data = detail;
+             } else {
+               console.error('❌ [编辑页面] 掌子面素描详情API返回null');
+               Message.error('未找到掌子面素描数据');
+               data = null;
              }
            } catch (e) {
-             console.error('获取掌子面素描详情失败', e);
+             console.error('❌ [编辑页面] 获取掌子面素描详情失败:', e);
+             Message.error('获取详情失败：' + (e instanceof Error ? e.message : '未知错误'));
+             data = null;
            }
         }
         
@@ -138,13 +144,22 @@ function GeologyForecastEditPage() {
           const formattedDate = data.monitordate 
             ? new Date(data.monitordate).toISOString().replace('T', ' ').split('.')[0] 
             : undefined;
-            
-          form.setFieldsValue({
+          
+          const formData = {
             ...data,
             monitordate: formattedDate
-          });
+          };
+          
+          console.log('📝 [编辑页面] 准备填充到表单的数据:', formData);
+          console.log('📝 [编辑页面] 表单数据的所有键:', Object.keys(formData));
+          
+          form.setFieldsValue(formData);
+          
+          console.log('✅ [编辑页面] 表单数据已填充');
+          console.log('🔍 [编辑页面] 当前表单值:', form.getFieldsValue());
         } else {
-          Message.warning('未能获取到数据详情');
+          console.error('❌ [编辑页面] 无数据可显示');
+          // 数据为null，表单保持空白
         }
       } catch (error) {
         console.error('初始化数据失败:', error);
@@ -519,7 +534,7 @@ function GeologyForecastEditPage() {
                </Grid.Row>
              </div>
           </TabPane>
-          <TabPane key="face_info" title="掌子面及其他信息/围岩等级">
+          <TabPane key="face_info" title="其他信息及基土体数据信息">
              <div style={{ padding: '20px' }}>
                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>掌子面信息</div>
                <Grid.Row gutter={24}>
@@ -588,12 +603,102 @@ function GeologyForecastEditPage() {
                </Grid.Row>
              </div>
           </TabPane>
-          <TabPane key="rock_soil" title="岩土体类别">
-             <div style={{ padding: '20px', textAlign: 'center' }}>
-               <Empty description="岩土体类别界面开发中" />
+          <TabPane key="rock_soil" title="掌子面数据">
+             <div style={{ padding: '20px' }}>
+               <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>掌子面围岩信息</div>
+               
+               <Grid.Row gutter={24}>
+                 <Grid.Col span={8}>
+                   <Form.Item label="围岩基本分级" field="basicwylevel">
+                     <Select placeholder="请选择">
+                       <Select.Option value={1}>Ⅰ</Select.Option>
+                       <Select.Option value={2}>Ⅱ</Select.Option>
+                       <Select.Option value={3}>Ⅲ</Select.Option>
+                       <Select.Option value={4}>Ⅳ</Select.Option>
+                       <Select.Option value={5}>Ⅴ</Select.Option>
+                       <Select.Option value={6}>Ⅵ</Select.Option>
+                     </Select>
+                   </Form.Item>
+                 </Grid.Col>
+                 <Grid.Col span={8}>
+                   <Form.Item label="渗水量" field="shenshuiliang">
+                     <InputNumber style={{ width: '100%' }} placeholder="渗水量" />
+                   </Form.Item>
+                 </Grid.Col>
+                 <Grid.Col span={8}>
+                   <Form.Item label="地下水评定" field="dxspd">
+                     <Select placeholder="请选择">
+                       <Select.Option value={1}>潮湿</Select.Option>
+                       <Select.Option value={2}>点滴状出水</Select.Option>
+                       <Select.Option value={3}>淋雨</Select.Option>
+                       <Select.Option value={4}>涌流</Select.Option>
+                     </Select>
+                   </Form.Item>
+                 </Grid.Col>
+               </Grid.Row>
+               
+               <Grid.Row gutter={24}>
+                 <Grid.Col span={8}>
+                   <Form.Item label="埋深H" field="maishenH">
+                     <InputNumber style={{ width: '100%' }} placeholder="埋深H" />
+                   </Form.Item>
+                 </Grid.Col>
+                 <Grid.Col span={8}>
+                   <Form.Item label="评估基准" field="pinggujijun">
+                     <Input placeholder="评估基准" />
+                   </Form.Item>
+                 </Grid.Col>
+                 <Grid.Col span={8}>
+                   <Form.Item label="修正后围岩级别" field="fixwylevel">
+                     <Select placeholder="请选择">
+                       <Select.Option value={1}>Ⅰ</Select.Option>
+                       <Select.Option value={2}>Ⅱ</Select.Option>
+                       <Select.Option value={3}>Ⅲ</Select.Option>
+                       <Select.Option value={4}>Ⅳ</Select.Option>
+                       <Select.Option value={5}>Ⅴ</Select.Option>
+                       <Select.Option value={6}>Ⅵ</Select.Option>
+                     </Select>
+                   </Form.Item>
+                 </Grid.Col>
+               </Grid.Row>
+               
+               <Grid.Row gutter={24}>
+                 <Grid.Col span={8}>
+                   <Form.Item label="初始地应力评定" field="csdylpd">
+                     <Select placeholder="请选择">
+                       <Select.Option value="一般地应力">一般地应力</Select.Option>
+                       <Select.Option value="较高地应力">较高地应力</Select.Option>
+                       <Select.Option value="高地应力">高地应力</Select.Option>
+                     </Select>
+                   </Form.Item>
+                 </Grid.Col>
+                 <Grid.Col span={8}>
+                   <Form.Item label="地质构造应力状态" field="dzgzylzt">
+                     <Input placeholder="地质构造应力状态" />
+                   </Form.Item>
+                 </Grid.Col>
+                 <Grid.Col span={8}>
+                   <Form.Item label="初始地应力其他描述" field="csdylqtms">
+                     <Input placeholder="初始地应力其他描述" />
+                   </Form.Item>
+                 </Grid.Col>
+               </Grid.Row>
+               
+               <Grid.Row gutter={24}>
+                 <Grid.Col span={24}>
+                   <Form.Item label="掌子面简要描述" field="zzmjyms">
+                     <TextArea 
+                       rows={6} 
+                       placeholder="请输入掌子面简要描述..." 
+                       maxLength={2000} 
+                       showWordLimit 
+                     />
+                   </Form.Item>
+                 </Grid.Col>
+               </Grid.Row>
              </div>
           </TabPane>
-          <TabPane key="segments" title="分段信息及风险等级">
+          <TabPane key="segments" title="分段信息及灾下大趋向">
              <TspSegmentsTab 
                 form={form} 
                 ybjgList={ybjgList} 
@@ -601,7 +706,7 @@ function GeologyForecastEditPage() {
                 onRemoteSave={handlePartialSave}
              />
           </TabPane>
-          <TabPane key="attachments" title="附件及成果信息上传">
+          <TabPane key="attachments" title="附件及成果上传">
              <div style={{ padding: '20px' }}>
                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>预报成果图片</div>
                <Grid.Row gutter={24}>
