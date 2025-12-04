@@ -298,75 +298,51 @@ class APIAdapter {
     startDate?: string;
     endDate?: string;
   }) {
-    if (USE_REAL_API) {
-      const result = await realAPI.getForecastDesigns(params);
-      
-      // 如果后端返回空数据，使用 Mock 数据进行展示
-      if (result.total === 0) {
-        console.warn('⚠️ [apiAdapter] 后端无设计预报数据，使用 Mock 数据展示界面');
-        return this.generateMockDesignInfo('mock', params);
-      }
-      
-      return result;
-    } else {
-      // Mock实现：生成预报设计列表
-      return this.generateMockDesignInfo('mock', params);
-    }
+    const result = await realAPI.getForecastDesigns(params);
+    
+    console.log('📊 [apiAdapter] getForecastDesigns 结果:', {
+      total: result.total,
+      listLength: result.list.length,
+      page: params.page,
+      pageSize: params.pageSize
+    });
+    
+    return result;
   }
 
   /**
    * 创建预报设计记录
    */
   async createForecastDesign(data: any) {
-    if (USE_REAL_API) {
-      return realAPI.createForecastDesign(data);
-    } else {
-      return { success: true };
-    }
+    return realAPI.createForecastDesign(data);
   }
 
   /**
    * 更新预报设计记录
    */
   async updateForecastDesign(id: string, data: any) {
-    if (USE_REAL_API) {
-      return realAPI.updateForecastDesign(id, data);
-    } else {
-      return { success: true };
-    }
+    return realAPI.updateForecastDesign(id, data);
   }
 
   /**
    * 删除预报设计记录
    */
   async deleteForecastDesign(id: string) {
-    if (USE_REAL_API) {
-      return realAPI.deleteForecastDesign(id);
-    } else {
-      return { success: true };
-    }
+    return realAPI.deleteForecastDesign(id);
   }
 
   /**
    * 批量删除预报设计记录
    */
   async batchDeleteForecastDesigns(ids: string[]) {
-    if (USE_REAL_API) {
-      return realAPI.batchDeleteForecastDesigns(ids);
-    } else {
-      return { success: true };
-    }
+    return realAPI.batchDeleteForecastDesigns(ids);
   }
 
   /**
    * 导入预报设计记录
    */
   async importForecastDesigns(file: File) {
-    if (USE_REAL_API) {
-      return realAPI.importForecastDesigns(file);
-    } else {
-      return { success: true, added: 5 };
-    }
+    return realAPI.importForecastDesigns(file);
   }
 
   // ========== 设计围岩等级 CRUD ==========
@@ -1139,9 +1115,9 @@ class APIAdapter {
   }
 
   // 钻探法操作
-  async getDrillingDetail(id: string) {
+  async getDrillingDetail(id: string, method?: string | null) {
     if (USE_REAL_API) {
-      return realAPI.getDrillingMethodDetail(parseInt(id));
+      return realAPI.getDrillingMethodDetail(parseInt(id), method);
     } else {
       return { id, method: '钻探法', details: 'Mock详情数据' };
     }

@@ -747,10 +747,55 @@ class RealAPIService {
   /**
    * 获取钻探法详情
    * @param ztfPk 钻探法主键
+   * @param method 预报方法（13=超前水平钻，14=加深炮孔）
    * @returns 钻探法详细信息
    */
-  async getDrillingMethodDetail(ztfPk: number): Promise<any> {
-    return get<any>(`/api/ztf/${ztfPk}`);
+  async getDrillingMethodDetail(ztfPk: number, method?: string | null): Promise<any> {
+    console.log('🔍 [realAPI] 钻探法详情请求, ztfPk:', ztfPk, 'method:', method);
+    
+    // 根据method选择不同的API端点
+    let endpoint = '';
+    if (method === '13') {
+      // 超前水平钻
+      endpoint = `/api/v1/ztf/cqspz/${ztfPk}`;
+      console.log('📡 [realAPI] 调用超前水平钻详情API:', endpoint);
+    } else if (method === '14') {
+      // 加深炮孔
+      endpoint = `/api/v1/ztf/jspk/${ztfPk}`;
+      console.log('📡 [realAPI] 调用加深炮孔详情API:', endpoint);
+    } else {
+      // 默认使用超前水平钻API
+      endpoint = `/api/v1/ztf/cqspz/${ztfPk}`;
+      console.log('⚠️ [realAPI] 未指定method，默认使用超前水平钻API:', endpoint);
+    }
+    
+    try {
+      const response = await get<any>(endpoint);
+      console.log('✅ [realAPI] 钻探法详情响应:', response);
+      
+      // 处理响应格式
+      if (response && typeof response === 'object') {
+        if ('resultcode' in response || 'code' in response) {
+          const code = response.resultcode || response.code;
+          if (code === 200 || code === 0) {
+            console.log('📦 [realAPI] 钻探法详情数据:', response.data);
+            return response.data || response.result;
+          } else {
+            const msg = response.message || response.msg || '获取钻探法详情失败';
+            console.error('❌ [realAPI] 钻探法详情返回错误:', code, msg);
+            throw new Error(msg);
+          }
+        }
+        // 如果响应直接是数据对象
+        return response;
+      }
+      
+      console.error('❌ [realAPI] 钻探法详情响应格式未知:', response);
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] 钻探法详情请求失败:', error);
+      throw error;
+    }
   }
 
   /**
@@ -791,54 +836,26 @@ class RealAPIService {
       console.log('🔍 [realAPI] 请求参数:', params);
       
       // 使用新的API端点，需要siteId作为必需参数
-      const requestParams = {
+      const requestParams: any = {
         siteId: params.siteId || '1', // 默认使用工点ID 1
         pageNum: params.pageNum || 1,
-        pageSize: params.pageSize || 10,
-        ...(params.method && { method: params.method }),
-        ...(params.begin && { begin: params.begin }),
-        ...(params.end && { end: params.end })
+        pageSize: params.pageSize || 10
       };
       
-      // 尝试不同的siteId值进行测试
-      console.log('🧪 [realAPI] 测试不同的siteId值');
-      console.log('🔍 [realAPI] 当前使用的siteId:', requestParams.siteId);
-      
-      // 测试多个可能的ID值（包括工作面ID）
-      const testIds = ['230412', '11282', '1', '11457', '76833'];
-      
-      for (const testId of testIds) {
-        console.log(`\n🔍 [realAPI] 测试 siteId=${testId}`);
-        
-        // 关键：添加 method=99 获取全部数据
-        const testParams = { 
-          ...requestParams, 
-          siteId: testId,
-          method: 99,  // 99 代表获取全部预报方法
-          pageSize: 1000  // 增大pageSize以获取更多数据
-        };
-        
-        try {
-          const testResponse = await get<any>(`/api/v1/sjyb/list`, { params: testParams });
-          const testRecords = testResponse?.sjybIPage?.records || [];
-          const testTotal = testResponse?.sjybIPage?.total || 0;
-          
-          console.log(`📊 [realAPI] siteId=${testId} (method=99) 结果: records=${testRecords.length}, total=${testTotal}`);
-          
-          if (testTotal > 0) {
-            console.log(`✅ [realAPI] 找到有数据的siteId: ${testId}`);
-            console.log(`📄 [realAPI] 第一条数据:`, testRecords[0]);
-            requestParams.siteId = testId;
-            requestParams.method = 99;  // 使用找到的配置
-            requestParams.pageSize = 1000;
-            break;
-          }
-        } catch (error) {
-          console.log(`❌ [realAPI] siteId=${testId} 请求失败:`, error);
-        }
+      // 只有明确传入method参数时才添加，否则获取全部
+      if (params.method !== undefined) {
+        requestParams.method = params.method;
       }
       
-      console.log(`\n🎯 [realAPI] 最终使用的siteId: ${requestParams.siteId}\n`);
+      if (params.begin) {
+        requestParams.begin = params.begin;
+      }
+      
+      if (params.end) {
+        requestParams.end = params.end;
+      }
+      
+      console.log('🔍 [realAPI] getDesignForecastList 请求参数:', requestParams);
       
       const response = await get<any>(`/api/v1/sjyb/list`, { params: requestParams });
       console.log('🔍 [realAPI] getDesignForecastList 响应:', response);
@@ -1431,13 +1448,66 @@ class RealAPIService {
         pageSize: params.pageSize,
       };
       
-      // 如果有方法筛选，添加到参数
+      // 如果有方法筛选，转换为数字添加到参数
       if (params.method) {
-        backendParams.method = params.method;
+        // 前端可能传的是方法名称，需要转换为数字
+        // 暂时不添加method参数，获取全部数据
+        console.log('⚠️ [realAPI] 忽略method筛选参数:', params.method);
+      }
+      
+      // 添加时间范围参数
+      if (params.startDate) {
+        backendParams.begin = params.startDate + 'T00:00:00';
+      }
+      if (params.endDate) {
+        backendParams.end = params.endDate + 'T23:59:59';
       }
       
       // 调用后端 /api/v1/sjyb/list
-      const response = await this.getDesignForecastList(backendParams);
+      console.log('🚀 [realAPI] getForecastDesigns 调用后端接口，参数:', backendParams);
+      console.log('🎯 [realAPI] 使用的siteId:', backendParams.siteId);
+      
+      // 如果数据为空，尝试测试其他可能的siteId
+      let response = await this.getDesignForecastList(backendParams);
+      
+      // 如果第一次请求返回空数据，尝试其他常见的siteId
+      if (response?.sjybIPage?.total === 0) {
+        console.warn('⚠️ [realAPI] siteId=' + backendParams.siteId + ' 无数据，尝试其他siteId');
+        const testSiteIds = ['230412', '11282', '11457', '76833', '1', '2', '3'];
+        
+        console.group('🧪 [realAPI] 测试多个siteId');
+        for (const testId of testSiteIds) {
+          try {
+            console.log(`\n🔍 测试 siteId=${testId}...`);
+            const testResponse = await this.getDesignForecastList({
+              ...backendParams,
+              siteId: testId
+            });
+            
+            const testTotal = testResponse?.sjybIPage?.total || 0;
+            const testRecords = testResponse?.sjybIPage?.records?.length || 0;
+            console.log(`   结果: total=${testTotal}, records=${testRecords}`);
+            
+            if (testTotal > 0) {
+              console.log(`✅ 找到有数据的siteId: ${testId}`);
+              response = testResponse;
+              break;
+            }
+          } catch (error) {
+            console.error(`   ❌ siteId=${testId} 请求失败:`, error);
+          }
+        }
+        console.groupEnd();
+        
+        // 如果所有测试都失败，显示警告
+        if (response?.sjybIPage?.total === 0) {
+          console.error('❌ [realAPI] 所有测试的siteId都没有数据！');
+          console.warn('💡 可能的原因:');
+          console.warn('   1. 数据库中确实没有设计预报数据');
+          console.warn('   2. 当前用户没有权限访问任何工点的数据');
+          console.warn('   3. 需要通过其他方式（如从工点页面进入）才能获取数据');
+        }
+      }
       
       console.log('🔍 [realAPI] getForecastDesigns 原始响应:', response);
       console.log('🔍 [realAPI] response.resultcode:', response?.resultcode);
@@ -1445,9 +1515,10 @@ class RealAPIService {
       console.log('🔍 [realAPI] response.data:', response?.data);
       console.log('🔍 [realAPI] response.data.sjybIPage:', response?.data?.sjybIPage);
       
-      // 详细显示sjybIPage的内容
-      if (response?.sjybIPage) {
-        const sjybIPage = response.sjybIPage;
+      // 详细显示sjybIPage的内容（兼容两种路径）
+      const sjybIPage = response?.data?.sjybIPage || response?.sjybIPage;
+      if (sjybIPage) {
+        console.log('✅ [realAPI] 找到sjybIPage数据');
         console.log('🔍 [realAPI] sjybIPage.records:', sjybIPage.records);
         console.log('🔍 [realAPI] sjybIPage.total:', sjybIPage.total);
         console.log('🔍 [realAPI] sjybIPage.current:', sjybIPage.current);
@@ -1456,15 +1527,22 @@ class RealAPIService {
         // 如果有records，显示第一条记录的详细信息
         if (sjybIPage.records && sjybIPage.records.length > 0) {
           console.log('🔍 [realAPI] 第一条记录详情:', sjybIPage.records[0]);
+        } else {
+          console.warn('⚠️ [realAPI] sjybIPage.records 为空或不存在');
         }
+      } else {
+        console.error('❌ [realAPI] 未找到sjybIPage数据！检查响应结构');
+        console.log('🔍 [realAPI] 完整响应:', JSON.stringify(response, null, 2));
       }
       
-      // HTTP拦截器已经提取了data，实际响应格式: { sjybIPage: { records: [...], total: number } }
-      const page = response?.sjybIPage || {};
+      // HTTP拦截器已经提取了data，但需要兼容多种返回格式
+      // 可能的格式：response.sjybIPage 或 response.data.sjybIPage
+      const page = (response?.data?.sjybIPage || response?.sjybIPage || {}) as any;
       const backendList: DesignForecast[] = page.records || [];
-      const total = page.total || 0;
+      const total = typeof page.total === 'number' ? page.total : 0;
       
       console.log('🔍 [realAPI] 解析后 - records数组长度:', backendList.length, 'total:', total);
+      console.log('🔍 [realAPI] 使用的数据路径:', response?.data?.sjybIPage ? 'response.data.sjybIPage' : 'response.sjybIPage');
       
       // 数据转换: 后端 DesignForecast -> 前端 ForecastDesignRecord
       const list: ForecastDesignRecord[] = backendList.map(item => {

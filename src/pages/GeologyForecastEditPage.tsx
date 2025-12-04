@@ -12,7 +12,10 @@ import {
   Grid, 
   Spin, 
   Space, 
-  Empty
+  Empty,
+  Upload,
+  Modal,
+  Radio
 } from '@arco-design/web-react'
 import { IconLeft, IconSave } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
@@ -51,6 +54,11 @@ function GeologyForecastEditPage() {
   const [ybjgList, setYbjgList] = useState<any[]>([])
   const [tspPdList, setTspPdList] = useState<any[]>([])
   const [tspBxList, setTspBxList] = useState<any[]>([])
+  const [zkList, setZkList] = useState<any[]>([])
+  const [editZkVisible, setEditZkVisible] = useState(false)
+  const [currentZk, setCurrentZk] = useState<any>(null)
+  const [currentZkIndex, setCurrentZkIndex] = useState<number>(-1)
+  const [zkForm] = Form.useForm()
 
   // 初始化数据
   useEffect(() => {
@@ -113,6 +121,27 @@ function GeologyForecastEditPage() {
              console.error('获取洞身素描详情失败', e);
            }
         }
+        
+        // 如果是钻探法，调用详情接口
+        if (type === 'drilling') {
+           try {
+             console.log('🔍 [编辑页面] 钻探法类型，method:', methodParam);
+             // method=13 超前水平钻, method=14 加深炮孔
+             const detail = await apiAdapter.getDrillingDetail(id, methodParam);
+             console.log('📥 [编辑页面] 钻探法详情数据:', detail);
+             if (detail) {
+               data = detail;
+             } else {
+               console.error('❌ [编辑页面] 钻探法详情API返回null');
+               Message.error('未找到钻探法数据');
+               data = null;
+             }
+           } catch (e) {
+             console.error('❌ [编辑页面] 获取钻探法详情失败:', e);
+             Message.error('获取详情失败：' + (e instanceof Error ? e.message : '未知错误'));
+             data = null;
+           }
+        }
 
         if (data) {
           setRecord(data);
@@ -138,6 +167,12 @@ function GeologyForecastEditPage() {
             setTspBxList(data.tspBxdataVOList);
           } else if (data.tspBxdataList) {
             setTspBxList(data.tspBxdataList);
+          }
+          
+          // 初始化钻探法钻孔列表
+          if (data.cqspzZkzzVOList) {
+            setZkList(data.cqspzZkzzVOList);
+            console.log('🔍 [编辑页面] 钻孔列表数据:', data.cqspzZkzzVOList);
           }
           
           // 格式化日期
@@ -237,7 +272,12 @@ function GeologyForecastEditPage() {
           result = await apiAdapter.updateTunnelSketch(id, values);
           break;
         case 'drilling':
-          result = await apiAdapter.updateDrilling(id, values);
+          // 钻探法需要包含钻孔列表数据
+          const drillingData = {
+            ...submitData,
+            cqspzZkzzVOList: zkList  // 包含钻孔列表
+          };
+          result = await apiAdapter.updateDrilling(actualId, drillingData);
           break;
         default:
           Message.error('不支持的类型');
@@ -709,23 +749,116 @@ function GeologyForecastEditPage() {
           <TabPane key="attachments" title="附件及成果上传">
              <div style={{ padding: '20px' }}>
                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>预报成果图片</div>
-               <Grid.Row gutter={24}>
-                 <Grid.Col span={12}>
-                   <Form.Item label="掌子面素描图" field="zzmsmpic">
-                     <Input placeholder="掌子面素描图文件路径" />
-                   </Form.Item>
+               
+               <Grid.Row gutter={16}>
+                 <Grid.Col span={8}>
+                   <div style={{ 
+                     border: '1px solid #E5E6EB', 
+                     borderRadius: '2px', 
+                     padding: '20px',
+                     backgroundColor: '#FAFAFA',
+                     height: '240px'
+                   }}>
+                     <div style={{ 
+                       fontSize: '14px', 
+                       fontWeight: '500', 
+                       marginBottom: '16px',
+                       color: '#1D2129'
+                     }}>分段+测点选择</div>
+                     <Form.Item field="addition" style={{ marginBottom: 0 }}>
+                       <Upload
+                         action="/api/v1/zzmsm/file"
+                         name="addition"
+                         limit={1}
+                         accept=".txt,.doc,.docx,.pdf"
+                         data={{
+                           ybPk: id,
+                           siteId: form.getFieldValue('siteId')
+                         }}
+                         headers={{
+                           Authorization: `Bearer ${localStorage.getItem('token')}`
+                         }}
+                         tip="支持 txt、doc、docx、pdf 格式"
+                       />
+                     </Form.Item>
+                     <div style={{ marginTop: '16px' }}>
+                       <Button type="outline" size="small" style={{ width: '80px' }}>预览</Button>
+                     </div>
+                   </div>
                  </Grid.Col>
-                 <Grid.Col span={12}>
-                   <Form.Item label="其他图片" field="images">
-                     <Input placeholder="其他图片文件路径" />
-                   </Form.Item>
+                 
+                 <Grid.Col span={8}>
+                   <div style={{ 
+                     border: '1px solid #E5E6EB', 
+                     borderRadius: '2px', 
+                     padding: '20px',
+                     backgroundColor: '#FAFAFA',
+                     height: '240px'
+                   }}>
+                     <div style={{ 
+                       fontSize: '14px', 
+                       fontWeight: '500', 
+                       marginBottom: '16px',
+                       color: '#1D2129'
+                     }}>地下开挖平剖面</div>
+                     <Form.Item field="zzmsmpic" style={{ marginBottom: 0 }}>
+                       <Upload
+                         action="/api/v1/zzmsm/file"
+                         name="zzmsmpic"
+                         limit={1}
+                         accept=".jpg,.jpeg,.png,.pdf"
+                         listType="picture-card"
+                         data={{
+                           ybPk: id,
+                           siteId: form.getFieldValue('siteId')
+                         }}
+                         headers={{
+                           Authorization: `Bearer ${localStorage.getItem('token')}`
+                         }}
+                         tip="支持 jpg、png、pdf 格式"
+                       />
+                     </Form.Item>
+                     <div style={{ marginTop: '16px' }}>
+                       <Button type="outline" size="small" style={{ width: '80px' }}>预览</Button>
+                     </div>
+                   </div>
                  </Grid.Col>
-               </Grid.Row>
-               <Grid.Row gutter={24}>
-                 <Grid.Col span={24}>
-                   <Form.Item label="附件" field="addition">
-                     <Input placeholder="附件文件路径" />
-                   </Form.Item>
+                 
+                 <Grid.Col span={8}>
+                   <div style={{ 
+                     border: '1px solid #E5E6EB', 
+                     borderRadius: '2px', 
+                     padding: '20px',
+                     backgroundColor: '#FAFAFA',
+                     height: '240px'
+                   }}>
+                     <div style={{ 
+                       fontSize: '14px', 
+                       fontWeight: '500', 
+                       marginBottom: '16px',
+                       color: '#1D2129'
+                     }}>绘制统计图片</div>
+                     <Form.Item field="images" style={{ marginBottom: 0 }}>
+                       <Upload
+                         action="/api/v1/zzmsm/file"
+                         name="images"
+                         multiple
+                         accept=".jpg,.jpeg,.png"
+                         listType="picture-card"
+                         data={{
+                           ybPk: id,
+                           siteId: form.getFieldValue('siteId')
+                         }}
+                         headers={{
+                           Authorization: `Bearer ${localStorage.getItem('token')}`
+                         }}
+                         tip="支持 jpg、png 格式，可上传多张"
+                       />
+                     </Form.Item>
+                     <div style={{ marginTop: '16px' }}>
+                       <Button type="outline" size="small" style={{ width: '80px' }}>预览</Button>
+                     </div>
+                   </div>
                  </Grid.Col>
                </Grid.Row>
              </div>
@@ -925,6 +1058,371 @@ function GeologyForecastEditPage() {
       );
     }
 
+    // 钻探法的复杂表单（超前水平钻）
+    if (type === 'drilling') {
+      return (
+        <Tabs type="line">
+          <TabPane key="basic" title="基本信息及其他信息">
+            <div style={{ padding: '20px' }}>
+              <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>基本信息</div>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={8}>
+                  <Form.Item label="预报方法" field="method">
+                    <Select placeholder="请选择" disabled>
+                      {Object.entries(METHOD_MAP).map(([k, v]) => <Select.Option key={k} value={Number(k)}>{v}</Select.Option>)}
+                    </Select>
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="预报时间" field="monitordate">
+                    <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm:ss" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="起点里程" field="dkname">
+                    <Input placeholder="例如: DK" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={8}>
+                  <Form.Item label="终点里程" field="dkilo">
+                    <InputNumber style={{ width: '100%' }} placeholder="终点里程数值" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="里程区间" field="lcqj">
+                    <InputNumber style={{ width: '100%' }} placeholder="里程区间" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="预报长度" field="ybLength">
+                    <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" precision={2} />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={8}>
+                  <Form.Item label="地点" field="location">
+                    <Input placeholder="地点名称" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="地区人地道编号" field="dqrddNo">
+                    <Input placeholder="地区人地道编号" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="记录人人地道" field="jlrrdd">
+                    <Input placeholder="记录人人地道" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={8}>
+                  <Form.Item label="记录人" field="recorder">
+                    <Input placeholder="记录人姓名" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="技术负责人" field="techLeader">
+                    <Input placeholder="技术负责人" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="记录人电话" field="recorderTel">
+                    <Input placeholder="记录人电话" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={8}>
+                  <Form.Item label="监理人" field="supervisorname">
+                    <Input placeholder="监理人" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={8}>
+                  <Form.Item label="洞室测量" field="dscl">
+                    <Input placeholder="洞室测量" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>预报信息</div>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={12}>
+                  <Form.Item label="地质超前探测" field="dzqctc">
+                    <TextArea 
+                      rows={6} 
+                      placeholder="请输入地质超前探测信息..." 
+                      maxLength={2000} 
+                      showWordLimit 
+                    />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Form.Item label="预报结构现状态" field="ybjgxzt">
+                    <TextArea 
+                      rows={6} 
+                      placeholder="请输入预报结构现状态..." 
+                      maxLength={2000} 
+                      showWordLimit 
+                    />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            </div>
+          </TabPane>
+          
+          <TabPane key="segments" title="分段信息及下次超前地质预报">
+            <div style={{ padding: '20px' }}>
+              <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>分段信息</div>
+              
+              {/* 分段信息表格 */}
+              <div style={{ marginBottom: '20px' }}>
+                <Button type="primary" size="small" style={{ marginBottom: '12px' }}>新增</Button>
+                <div style={{ border: '1px solid #E5E6EB', borderRadius: '2px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ backgroundColor: '#F7F8FA' }}>
+                      <tr>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>序号</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>初始终点标</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>开挖到期标</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>现桩号到期标</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>与下次计划</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>记录时间段</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>检测说明</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>围岩分析</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>地质描绘</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ybjgList && ybjgList.length > 0 ? (
+                        ybjgList.map((item: any, index: number) => (
+                          <tr key={item.ybjgPk || index} style={{ borderBottom: '1px solid #E5E6EB' }}>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{index + 1}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.dkname || '-'}{item.sdkilo ? `+${item.sdkilo}` : ''}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.dkname || '-'}{item.edkilo ? `+${item.edkilo}` : ''}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.xzhddqb || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.yxcjh || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.ybjgTime || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.jcsm || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>围岩{item.wylevel ? ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ'][item.wylevel - 1] : '-'} {item.grade ? `级${item.grade}` : ''}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{item.jlresult || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>
+                              <Button type="text" size="mini" status="danger">删除</Button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={10} style={{ padding: '40px', textAlign: 'center', color: '#86909C', fontSize: '14px' }}>
+                            暂无数据
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '30px', fontWeight: 'bold' }}>下次超前地质预报信息</div>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={12}>
+                  <Form.Item label="下次预报说明" field="xcybsm">
+                    <TextArea 
+                      rows={6} 
+                      placeholder="请输入下次预报说明..." 
+                      maxLength={2000} 
+                      showWordLimit 
+                    />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Form.Item label="现场评论说明" field="xcplsm">
+                    <TextArea 
+                      rows={6} 
+                      placeholder="请输入现场评论说明..." 
+                      maxLength={2000} 
+                      showWordLimit 
+                    />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            </div>
+          </TabPane>
+          
+          <TabPane key="drill_info" title="超前水平钻信息表">
+            <div style={{ padding: '20px' }}>
+              <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>超前水平钻信息详情</div>
+              
+              {/* 钻孔信息表格 */}
+              <div style={{ marginBottom: '20px' }}>
+                <Button type="primary" size="small" style={{ marginBottom: '12px' }}>新增</Button>
+                <div style={{ border: '1px solid #E5E6EB', borderRadius: '2px', overflow: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
+                    <thead style={{ backgroundColor: '#F7F8FA' }}>
+                      <tr>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>序号</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>开钻时间</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>完钻时间</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>开钻桩号</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>完钻人地编号</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>开孔入地编号</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>开孔_编号编号</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>记录人编号</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>钻孔全长</th>
+                        <th style={{ padding: '14px 10px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '14px', fontWeight: '500' }}>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {zkList && zkList.length > 0 ? (
+                        zkList.map((item: any, index: number) => (
+                          <tr key={item.cqspzZkzzPk || index} style={{ borderBottom: '1px solid #E5E6EB' }}>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>{index + 1}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>
+                              {item.kssj ? new Date(item.kssj).toLocaleString('zh-CN') : '-'}
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>
+                              {item.jssj ? new Date(item.jssj).toLocaleString('zh-CN') : '-'}
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>{item.kwbh || '-'}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>{item.zkzj || '-'}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>{item.kkwzsyt || '-'}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>{item.kwbh || '-'}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>{item.zjcode || '-'}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>
+                              {item.jgdjl || item.jzxxjl || '-'}
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>
+                              <Space size="small">
+                                <Button 
+                                  type="text" 
+                                  size="small" 
+                                  status="warning" 
+                                  style={{ fontSize: '14px' }}
+                                  onClick={() => {
+                                    console.log('🔍 [编辑钻孔] 钻孔数据:', item);
+                                    console.log('🔍 [编辑钻孔] 测点数据:', item.cqspzZkzzDcxxVOList);
+                                    console.log('🔍 [编辑钻孔] 钻探记录:', item.cqspzZkzzZtjlbVOList);
+                                    setCurrentZk(item);
+                                    setCurrentZkIndex(index);
+                                    zkForm.setFieldsValue(item);
+                                    setEditZkVisible(true);
+                                  }}
+                                >
+                                  编辑
+                                </Button>
+                                <Button 
+                                  type="text" 
+                                  size="small" 
+                                  status="danger" 
+                                  style={{ fontSize: '14px' }}
+                                  onClick={() => {
+                                    const newList = zkList.filter((_, idx) => idx !== index);
+                                    setZkList(newList);
+                                    Message.success('已从列表中删除，点击保存按钮提交更改');
+                                  }}
+                                >
+                                  删除
+                                </Button>
+                              </Space>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={10} style={{ padding: '40px', textAlign: 'center', color: '#86909C', fontSize: '14px' }}>
+                            暂无数据
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </TabPane>
+          
+          <TabPane key="attachments" title="附件及图片上传">
+            <div style={{ padding: '20px' }}>
+              <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件及成果信息上传</div>
+              
+              <Grid.Row gutter={24} style={{ display: 'flex', alignItems: 'flex-start' }}>
+                <Grid.Col span={12}>
+                  <Form.Item label="附件（任意格式）" style={{ marginBottom: 0 }}>
+                    <Upload
+                      action={`/api/v1/ztf/jspk/upload`}
+                      headers={{
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                      }}
+                      data={{
+                        ybPk: id,
+                        siteId: record?.siteId || ''
+                      }}
+                      accept="*/*"
+                      limit={10}
+                      multiple
+                      drag
+                      tip="点击或拖拽文件到此区域上传"
+                      onChange={(fileList, file) => {
+                        console.log('📤 [文件列表变化]', fileList, file);
+                        if (file.status === 'done') {
+                          console.log('✅ [上传成功]', file.name);
+                          Message.success(`${file.name} 上传成功`);
+                        } else if (file.status === 'error') {
+                          console.error('❌ [上传失败]', file.name);
+                          Message.error(`${file.name} 上传失败`);
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                </Grid.Col>
+                
+                <Grid.Col span={12}>
+                  <Form.Item label="代以明预报图" style={{ marginBottom: 0 }}>
+                    <Upload
+                      action={`/api/v1/ztf/jspk/upload`}
+                      headers={{
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                      }}
+                      data={{
+                        ybPk: id,
+                        siteId: record?.siteId || ''
+                      }}
+                      accept="image/*"
+                      limit={5}
+                      multiple
+                      drag
+                      tip="点击或拖拽图片到此区域上传"
+                      onChange={(fileList, file) => {
+                        console.log('📤 [图片列表变化]', fileList, file);
+                        if (file.status === 'done') {
+                          console.log('✅ [图片上传成功]', file.name);
+                          Message.success(`${file.name} 上传成功`);
+                        } else if (file.status === 'error') {
+                          console.error('❌ [图片上传失败]', file.name);
+                          Message.error(`${file.name} 上传失败`);
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            </div>
+          </TabPane>
+        </Tabs>
+      );
+    }
+
     // 默认简单表单
     return (
       <div style={{ padding: '20px', background: '#fff' }}>
@@ -985,6 +1483,290 @@ function GeologyForecastEditPage() {
           </Form>
         </Spin>
       </div>
+
+      {/* 钻孔编辑对话框 */}
+      <Modal
+        title="超前地质预报钻孔信息"
+        visible={editZkVisible}
+        onCancel={() => {
+          setEditZkVisible(false);
+          zkForm.resetFields();
+        }}
+        onOk={async () => {
+          try {
+            const values = await zkForm.validate();
+            const newList = [...zkList];
+            if (currentZkIndex >= 0) {
+              newList[currentZkIndex] = { ...currentZk, ...values };
+              setZkList(newList);
+              Message.success('钻孔信息已更新，请点击保存按钮提交');
+            }
+            setEditZkVisible(false);
+            zkForm.resetFields();
+          } catch (error) {
+            Message.error('请填写完整信息');
+          }
+        }}
+        style={{ width: '1200px' }}
+      >
+        <Form form={zkForm} layout="vertical">
+          <Tabs>
+            <TabPane key="basic" title="基本信息">
+              <Grid.Row gutter={24}>
+                {/* 左侧表单字段 */}
+                <Grid.Col span={12}>
+                  <Grid.Row gutter={16}>
+                    <Grid.Col span={24}>
+                      <Form.Item label="开始时间" field="kssj">
+                        <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm:ss" />
+                      </Form.Item>
+                    </Grid.Col>
+                    <Grid.Col span={24}>
+                      <Form.Item label="结束时间" field="jssj">
+                        <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm:ss" />
+                      </Form.Item>
+                    </Grid.Col>
+                    <Grid.Col span={24}>
+                      <Form.Item label="开始桩号" field="kwbh">
+                        <Input placeholder="开始桩号" />
+                      </Form.Item>
+                    </Grid.Col>
+                    <Grid.Col span={24}>
+                      <Form.Item label="结束桩号" field="endZh">
+                        <Input placeholder="结束桩号" />
+                      </Form.Item>
+                    </Grid.Col>
+                    <Grid.Col span={24}>
+                      <Form.Item label="开孔_开挖桩号" field="kwljangle">
+                        <InputNumber style={{ width: '100%' }} placeholder="例如: 3" />
+                      </Form.Item>
+                    </Grid.Col>
+                    <Grid.Col span={24}>
+                      <Form.Item label="开孔_人口编号" field="kwpjangle">
+                        <InputNumber style={{ width: '100%' }} placeholder="例如: 0" />
+                      </Form.Item>
+                    </Grid.Col>
+                  </Grid.Row>
+                </Grid.Col>
+                
+                {/* 右侧钻孔示意图 */}
+                <Grid.Col span={12}>
+                  <div style={{ 
+                    width: '100%',
+                    height: '400px',
+                    border: '1px solid #E5E6EB',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#FAFAFA'
+                  }}>
+                    <svg width="100%" height="100%" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                      {/* 坐标轴 */}
+                      <line x1="40" y1="320" x2="360" y2="320" stroke="#333" strokeWidth="1.5" />
+                      <line x1="40" y1="80" x2="40" y2="320" stroke="#333" strokeWidth="1.5" />
+                      
+                      {/* 刻度标注 */}
+                      <text x="30" y="75" fontSize="14" fill="#666">0</text>
+                      <text x="355" y="335" fontSize="14" fill="#666">400</text>
+                      <text x="15" y="325" fontSize="14" fill="#666">-400</text>
+                      
+                      {/* 根据测点数据绘制钻孔轮廓 */}
+                      {currentZk?.cqspzZkzzDcxxVOList && currentZk.cqspzZkzzDcxxVOList.length > 0 ? (
+                        <>
+                          {/* 绘制测点连线 */}
+                          <polyline
+                            points={currentZk.cqspzZkzzDcxxVOList.map((point: any, idx: number) => {
+                              const angle = (idx / currentZk.cqspzZkzzDcxxVOList.length) * 2 * Math.PI;
+                              const radius = point.dclc || 100;
+                              const x = 200 + radius * Math.cos(angle);
+                              const y = 200 + radius * Math.sin(angle);
+                              return `${x},${y}`;
+                            }).join(' ')}
+                            fill="none"
+                            stroke="#165DFF"
+                            strokeWidth="2"
+                          />
+                          {/* 绘制测点 */}
+                          {currentZk.cqspzZkzzDcxxVOList.map((point: any, idx: number) => {
+                            const angle = (idx / currentZk.cqspzZkzzDcxxVOList.length) * 2 * Math.PI;
+                            const radius = point.dclc || 100;
+                            const x = 200 + radius * Math.cos(angle);
+                            const y = 200 + radius * Math.sin(angle);
+                            return (
+                              <circle key={idx} cx={x} cy={y} r="3" fill="#165DFF" />
+                            );
+                          })}
+                        </>
+                      ) : (
+                        /* 默认圆形示意图 */
+                        <circle 
+                          cx="200" 
+                          cy="200" 
+                          r="100" 
+                          fill="none" 
+                          stroke="#165DFF" 
+                          strokeWidth="2"
+                        />
+                      )}
+                      
+                      {/* 中心点 */}
+                      <circle cx="200" cy="200" r="4" fill="#FF4D4F" />
+                      
+                      {/* 辅助线 */}
+                      <line x1="100" y1="200" x2="300" y2="200" stroke="#86909C" strokeWidth="1" strokeDasharray="5" />
+                      <line x1="200" y1="100" x2="200" y2="300" stroke="#86909C" strokeWidth="1" strokeDasharray="5" />
+                    </svg>
+                  </div>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24} style={{ marginTop: '20px' }}>
+                <Grid.Col span={12}>
+                  <Form.Item label="孔代号" field="kkwzsyt">
+                    <Input placeholder="孔代号" />
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Form.Item label="记录人编号" field="zjcode">
+                    <Input placeholder="记录人编号" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={24}>
+                  <Form.Item label="备注" field="remark">
+                    <TextArea rows={2} placeholder="请输入备注..." />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+              
+              <Grid.Row gutter={24}>
+                <Grid.Col span={12}>
+                  <Form.Item label="是否存在缺陷" field="sfqx">
+                    <Radio.Group>
+                      <Radio value={0}>不存在</Radio>
+                      <Radio value={1}>存在</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Form.Item label="缺陷图片" field="qxpic">
+                    <Upload action="/api/upload" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            </TabPane>
+            
+            <TabPane key="records" title="钻孔记录">
+              <div style={{ marginBottom: '20px' }}>
+                <Button type="primary" size="small" style={{ marginBottom: '12px' }}>新增</Button>
+                <div style={{ border: '1px solid #E5E6EB', borderRadius: '2px', overflow: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+                    <thead style={{ backgroundColor: '#F7F8FA' }}>
+                      <tr>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>开始时间</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>结束时间</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>钻孔深度</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>钻孔压力</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>钻速</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>开孔水压</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>开孔水速</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>开孔主变性率</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>地质描述</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentZk?.cqspzZkzzZtjlbVOList && currentZk.cqspzZkzzZtjlbVOList.length > 0 ? (
+                        currentZk.cqspzZkzzZtjlbVOList.map((record: any, idx: number) => (
+                          <tr key={record.cqspzZkzzZtjlbPk || idx} style={{ borderBottom: '1px solid #E5E6EB' }}>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>
+                              {record.kssj ? new Date(record.kssj).toLocaleString('zh-CN') : '-'}
+                            </td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>
+                              {record.jssj ? new Date(record.jssj).toLocaleString('zh-CN') : '-'}
+                            </td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.zksd || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.zkpressure || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.zkspeed || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.kwwaterpre || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.kwwaterspe || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.kwzbxl || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{record.dzms || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>
+                              <Space size="small">
+                                <Button type="text" size="mini" status="warning">编辑</Button>
+                                <Button type="text" size="mini" status="danger">删除</Button>
+                              </Space>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={10} style={{ padding: '40px', textAlign: 'center', color: '#86909C', fontSize: '14px' }}>
+                            暂无数据
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </TabPane>
+            
+            <TabPane key="detail" title="底层信息">
+              <div style={{ marginBottom: '20px' }}>
+                <Button type="primary" size="small" style={{ marginBottom: '12px' }}>新增</Button>
+                <div style={{ border: '1px solid #E5E6EB', borderRadius: '2px', overflow: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+                    <thead style={{ backgroundColor: '#F7F8FA' }}>
+                      <tr>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>地点代号</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>地点里程</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>分叉厚度</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>出水位置</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>出水量</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>测样位置</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>工程地质简介</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', borderBottom: '1px solid #E5E6EB', fontSize: '13px', fontWeight: '500' }}>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentZk?.cqspzZkzzDcxxVOList && currentZk.cqspzZkzzDcxxVOList.length > 0 ? (
+                        currentZk.cqspzZkzzDcxxVOList.map((point: any, idx: number) => (
+                          <tr key={point.cqspzZkzzDcxxPk || idx} style={{ borderBottom: '1px solid #E5E6EB' }}>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.dcdh || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.dclc || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.fchd || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.cslcz || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.csl || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.cywz || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>{point.gcdzjj || '-'}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '13px' }}>
+                              <Space size="small">
+                                <Button type="text" size="mini" status="warning">编辑</Button>
+                                <Button type="text" size="mini" status="danger">删除</Button>
+                              </Space>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#86909C', fontSize: '14px' }}>
+                            暂无数据
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </TabPane>
+          </Tabs>
+        </Form>
+      </Modal>
     </div>
   )
 }
