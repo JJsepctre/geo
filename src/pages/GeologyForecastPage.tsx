@@ -318,7 +318,7 @@ function GeologyForecastPage() {
                 </div>
               }
             />
-            <Button type="primary" onClick={() => navigate('/hello')} style={{ marginTop: '24px' }}>
+            <Button type="primary" onClick={() => navigate('/geo-forecast')} style={{ marginTop: '24px' }}>
               返回首页选择工点
             </Button>
           </div>
@@ -627,7 +627,7 @@ function GeologyForecastPage() {
           type="text" 
           icon={<IconLeft style={{ fontSize: 18 }} />} 
           style={{ color: '#1D2129' }}
-          onClick={() => navigate('/hello')}
+          onClick={() => navigate('/geo-forecast')}
         />
       </div>
 

@@ -45,7 +45,7 @@ interface TableDataRow {
 const GeoPointSearchIntegrated: React.FC = () => {
   const [searchValue, setSearchValue] = useState('');
   
-  // 工点列表（从HelloPage或后端获取）
+  // 工点列表（从GeoForecastPage或后端获取）
   const [workPoints] = useState<WorkPointItem[]>([
     { id: 'wp-1', name: '赵庄隧道DK487+449~+504明挖段', mileage: 'DK487+449-DK487+504', length: 55 },
     { id: 'wp-2', name: '赵庄隧道出口明洞', mileage: 'DK487+505-DK487+512', length: 7 },

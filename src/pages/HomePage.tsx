@@ -195,7 +195,7 @@ function HomePage() {
               alignItems: 'center',
               transition: 'color 0.2s'
             }}
-            onClick={() => navigate('/hello')}
+            onClick={() => navigate('/geo-forecast')}
             onMouseEnter={(e) => e.currentTarget.style.color = '#165dff'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#86909c'}
           >

@@ -403,7 +403,7 @@ function ForecastRockPage() {
           type="text" 
           icon={<IconLeft />} 
           style={{ color: '#fff' }}
-          onClick={() => navigate('/hello')}
+          onClick={() => navigate('/geo-forecast')}
         >
           返回
         </Button>

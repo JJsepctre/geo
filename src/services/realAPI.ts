@@ -1375,7 +1375,7 @@ class RealAPIService {
   }
 
   /**
-   * 获取工点探测数据（用于HelloPage等页面）
+   * 获取工点探测数据（用于GeoForecastPage等页面）
    */
   async getGeoPointDetectionData(workPointId: string): Promise<GeoPointDetectionData> {
     try {

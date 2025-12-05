@@ -35,7 +35,7 @@ npm start
 
 ### 📍 主页面 - 隧道和工点管理
 
-**路由**: `/hello`
+**路由**: `/geo-forecast`
 
 **功能**：
 
@@ -94,7 +94,7 @@ npm start
 ```
 src/
 ├── pages/              # 页面
-│   ├── HelloPage.tsx          ✅ 已集成真实API
+│   ├── GeoForecastPage.tsx          ✅ 已集成真实API
 │   ├── ForecastDesignPage.tsx ✅ 已集成真实API
 │   └── GeoPointSearch.tsx     ⚠️  使用硬编码Mock
 │
