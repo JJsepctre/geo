@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { IconLeft } from '@arco-design/web-react/icon' 
 import {
   Card, 
   Button, 
@@ -14,7 +15,8 @@ import {
   Input,
   InputNumber
 } from '@arco-design/web-react'
-import apiAdapter from '../services/apiAdapter'
+import { useNavigate, useLocation } from 'react-router-dom'
+import realAPI from '../services/realAPI'
 import OperationButtons from '../components/OperationButtons'
 
 const { TextArea } = Input
@@ -35,12 +37,19 @@ type DesignGeologyRecord = {
 }
 
 function ForecastGeologyPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // 从URL参数或路由状态中获取工点ID
+  const initialSiteId = (location.state as any)?.workPointId || new URLSearchParams(location.search).get('siteId') || '';
+  
   // 状态管理
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<DesignGeologyRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [siteId, setSiteId] = useState(initialSiteId)
   
   // 表格选择状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
@@ -139,21 +148,21 @@ function ForecastGeologyPage() {
   const fetchGeologyData = async () => {
     setLoading(true)
     try {
-      console.log('🔍 [ForecastGeologyPage] 获取设计地质数据')
+      console.log('🔍 [ForecastGeologyPage] 获取设计地质数据, siteId:', siteId)
       
-      const result = await apiAdapter.getWorkPointDesignGeology('1', {
-        page,
-        pageSize,
-        statusFilter: 'all' // 获取所有状态的数据
+      const result = await realAPI.getDesignGeologies({
+        sitePk: siteId ? parseInt(siteId) : undefined,
+        pageNum: page,
+        pageSize
       })
       
       console.log('✅ [ForecastGeologyPage] 设计地质数据:', result)
       
-      setData(result.list || [])
+      setData((result.records || []) as unknown as DesignGeologyRecord[])
       setTotal(result.total || 0)
       
-      if (result.list && result.list.length > 0) {
-        Message.success(`加载了 ${result.list.length} 条设计地质数据`)
+      if (result.records && result.records.length > 0) {
+        Message.success(`加载了 ${result.records.length} 条设计地质数据`)
       } else {
         Message.info('暂无设计地质数据')
       }
@@ -196,6 +205,7 @@ function ForecastGeologyPage() {
       onOk: async () => {
         try {
           // 调用删除API
+          await realAPI.deleteDesignGeology(String(record.sjdzPk))
           Message.success('删除成功')
           fetchGeologyData()
         } catch (error) {
@@ -208,6 +218,15 @@ function ForecastGeologyPage() {
   // 操作按钮处理函数
   const handleDownloadTemplate = async () => {
     try {
+      // 调用下载模板API
+      const blob = await realAPI.downloadDesignGeologyTemplate()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = '设计地质导入模板.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
       Message.success('模板下载成功')
     } catch (error) {
       Message.error('模板下载失败')
@@ -238,6 +257,10 @@ function ForecastGeologyPage() {
       onOk: async () => {
         try {
           Message.success(`批量删除成功：${selectedRowKeys.length} 条记录`)
+          
+          // 执行批量删除
+          await realAPI.batchDeleteDesignGeologies(selectedRowKeys)
+          
           setSelectedRowKeys([])
           fetchGeologyData()
         } catch (error) {
@@ -249,6 +272,30 @@ function ForecastGeologyPage() {
 
   return (
     <div>
+      {/* 顶部信息栏 */}
+      <div style={{ 
+        height: 44, 
+        background: 'linear-gradient(90deg, #A18AFF 0%, #8B7AE6 100%)', 
+        borderRadius: 6, 
+        marginBottom: 12, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        padding: '0 16px', 
+        color: '#fff', 
+        fontSize: '14px'
+      }}>
+        <span>设计预报 / 人员信息 / 地质点/DK713+920/DK713+920/设计地质</span>
+        <Button 
+          type="text" 
+          icon={<IconLeft />} 
+          style={{ color: '#fff' }}
+          onClick={() => navigate('/geo-forecast')}
+        >
+          返回
+        </Button>
+      </div>
+
       {/* 筛选条件 */}
       <Card style={{ marginBottom: '24px' }}>
         <Space>

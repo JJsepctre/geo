@@ -18,9 +18,10 @@ function DesignTabs() {
 
   return (
     <Tabs activeTab={activeKey} onChange={(key) => {
-      if (key === 'design') navigate('/forecast/design')
-      if (key === 'rock') navigate('/forecast/rock')
-      if (key === 'geology') navigate('/forecast/design-geology')
+      const search = location.search // 保留查询参数（如 siteId）
+      if (key === 'design') navigate(`/forecast/design${search}`)
+      if (key === 'rock') navigate(`/forecast/rock${search}`)
+      if (key === 'geology') navigate(`/forecast/design-geology${search}`)
     }} type="card-gutter" style={{ background: '#fff', padding: 8, borderRadius: 6 }}>
       <TabPane key="design" title="设计预报" />
       <TabPane key="rock" title="设计围岩" />

@@ -1538,12 +1538,16 @@ class RealAPIService {
     method?: string;
     startDate?: string;
     endDate?: string;
+    siteId?: string; // 允许显式传递 siteId
   }): Promise<{ list: ForecastDesignRecord[]; total: number }> {
     try {
       // 尝试获取实际的工点ID
-      let siteId = '1'; // 默认值
+      // 如果参数中传递了 siteId，优先使用
+      let siteId = params.siteId || '1'; // 默认值
       
-      try {
+      if (!params.siteId) {
+        // 如果没有传递 siteId，尝试智能获取（原逻辑）
+        try {
         // 获取第一个可用的工点ID
         const bidData = await this.getBidSectionList();
         if (bidData?.bdVOList?.length > 0) {
@@ -1564,9 +1568,10 @@ class RealAPIService {
       } catch (error) {
         console.log('⚠️ [realAPI] 获取实际工点ID失败，使用默认值:', error);
       }
-      
-      // 调用后端接口
-      const backendParams: any = {
+    }
+    
+    // 调用后端接口
+    const backendParams: any = {
         siteId: siteId,
         pageNum: params.page,
         pageSize: params.pageSize,

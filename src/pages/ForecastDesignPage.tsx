@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, DatePicker, Form, Grid, Input, InputNumber, Message, Modal, Select, Space, Table } from '@arco-design/web-react'
 import { IconDelete, IconEdit, IconLeft } from '@arco-design/web-react/icon'
-import { useNavigate } from 'react-router-dom'
-import apiAdapter from '../services/apiAdapter'
+import { useNavigate, useLocation } from 'react-router-dom'
+import apiAdapter from '../services/realAPI'
 import OperationButtons from '../components/OperationButtons'
 
 type ForecastMethodOption = {
@@ -32,11 +32,18 @@ const RangePicker = DatePicker.RangePicker
 
 function ForecastDesignPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  // 从URL参数或路由状态中获取工点ID
+  // 假设路由状态中传递了 workPointId
+  const initialSiteId = (location.state as any)?.workPointId || new URLSearchParams(location.search).get('siteId') || '';
+  
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ForecastRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [siteId, setSiteId] = useState(initialSiteId)
   const [form] = Form.useForm()
   const [addVisible, setAddVisible] = useState(false)
   const [editVisible, setEditVisible] = useState(false)
@@ -62,10 +69,12 @@ function ForecastDesignPage() {
       method?: string;
       startDate?: string;
       endDate?: string;
+      siteId?: string; // 添加 siteId 参数
     } = {
       page,
       pageSize,
       method: values.method,
+      siteId: siteId || undefined // 如果有 siteId，传递给 API
     }
     if (values.createdAt && Array.isArray(values.createdAt)) {
       params.startDate = values.createdAt[0]?.format('YYYY-MM-DD')

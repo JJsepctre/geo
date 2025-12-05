@@ -148,7 +148,7 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
           <Button
             type="primary"
             size="large"
-            onClick={() => onNavigate('/forecast/design')}
+            onClick={() => onNavigate(`/forecast/design?siteId=${workPointId}`)}
           >
             设计信息
           </Button>

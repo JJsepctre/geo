@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Button, Card, DatePicker, Form, Grid, Input, InputNumber, Message, Modal, Select, Space, Table } from '@arco-design/web-react'
 import { IconEdit, IconDelete, IconLeft } from '@arco-design/web-react/icon'
-import { useNavigate } from 'react-router-dom'
-import apiAdapter from '../services/apiAdapter'
-import { DesignRockGrade } from '../services/realAPI'
+import { useNavigate, useLocation } from 'react-router-dom'
+import realAPI, { DesignRockGrade } from '../services/realAPI'
 import OperationButtons from '../components/OperationButtons'
 
 // 页面使用的记录类型（转换后的格式）
@@ -25,11 +24,17 @@ const { RangePicker } = DatePicker
 
 function ForecastRockPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  // 从URL参数或路由状态中获取工点ID
+  const initialSiteId = (location.state as any)?.workPointId || new URLSearchParams(location.search).get('siteId') || '';
+  
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<RockGradeRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [siteId, setSiteId] = useState(initialSiteId)
   const [form] = Form.useForm()
   const [addVisible, setAddVisible] = useState(false)
   const [editVisible, setEditVisible] = useState(false)
@@ -84,11 +89,12 @@ function ForecastRockPage() {
       pageNum: page,
       pageSize,
       wydj: values.rockGrade ? rockGradeToNumber[values.rockGrade] : undefined,
+      sitePk: siteId ? parseInt(siteId) : undefined
     }
 
     setLoading(true)
     try {
-      const res = await apiAdapter.getDesignRockGrades(params)
+      const res = await realAPI.getDesignRockGrades(params)
       const convertedData = (res.records || []).map(convertToRecord)
       setData(convertedData)
       setTotal(res.total || 0)
@@ -129,7 +135,7 @@ function ForecastRockPage() {
       content: '确定要删除这条记录吗？',
       onOk: async () => {
         try {
-          await apiAdapter.deleteDesignRockGrade(id)
+          await realAPI.deleteDesignRockGrade(id)
           Message.success('删除成功')
           fetchList()
         } catch (error) {
@@ -150,7 +156,7 @@ function ForecastRockPage() {
       content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
       onOk: async () => {
         try {
-          await Promise.all(selectedRowKeys.map(id => apiAdapter.deleteDesignRockGrade(id)))
+          await Promise.all(selectedRowKeys.map(id => realAPI.deleteDesignRockGrade(id)))
           Message.success('批量删除成功')
           setSelectedRowKeys([])
           fetchList()
@@ -182,7 +188,7 @@ function ForecastRockPage() {
       // 按照API要求的格式构造数据
       const submitData = {
         sjwydj: {
-          siteId: '1',  // 默认工点ID，实际应从上下文获取
+          siteId: siteId || '1',  // 使用当前 siteId
           dkname: values.mileagePrefix,
           dkilo: dkilo,
           sjwydjLength: values.length,
@@ -193,10 +199,10 @@ function ForecastRockPage() {
       }
 
       if (editingRecord) {
-        await apiAdapter.updateDesignRockGrade(editingRecord.id, submitData)
+        await realAPI.updateDesignRockGrade(editingRecord.id, submitData)
         Message.success('更新成功')
       } else {
-        await apiAdapter.createDesignRockGrade(submitData)
+        await realAPI.createDesignRockGrade(submitData)
         Message.success('创建成功')
       }
 
@@ -351,7 +357,7 @@ function ForecastRockPage() {
       }
 
       // 调用导出接口（与下载模板相同）
-      const url = `/api/v1/platform/download/sjwy?startdate=${startdate}&enddate=${enddate}&siteID=1`
+      const url = `/api/v1/platform/download/sjwy?startdate=${startdate}&enddate=${enddate}&siteID=${siteId || 1}`
       window.open(url, '_blank')
       Message.success('开始导出...')
     } catch (error) {
@@ -372,7 +378,7 @@ function ForecastRockPage() {
             return
           }
           
-          await Promise.all(data.map(item => apiAdapter.deleteDesignRockGrade(item.id)))
+          await Promise.all(data.map(item => realAPI.deleteDesignRockGrade(item.id)))
           Message.success('清空成功')
           fetchList()
         } catch (error) {
