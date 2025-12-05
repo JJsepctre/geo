@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Spin, Empty, Collapse, Card, Tabs, Table, Space, Button, Message } from '@arco-design/web-react';
 import { IconRight, IconFile } from '@arco-design/web-react/icon';
 import DetectionChart from '../../../components/DetectionChart';
 import { WorkPoint } from '../../../services/geoForecastAPI';
+import apiAdapter from '../../../services/realAPI';
 
 const CollapseItem = Collapse.Item;
 const TabPane = Tabs.TabPane;
@@ -11,17 +12,7 @@ interface WorkPointListProps {
   loading: boolean;
   workPoints: WorkPoint[];
   searchKeyword: string;
-  onExpand: (workPoint: WorkPoint) => void;
-  // Detail props
-  loadingDetection: boolean;
-  detectionData: any;
-  selectedWorkPointId: string | undefined;
-  loadingForecastMethods: boolean;
-  geophysicalData: any[];
-  palmSketchData: any[];
-  tunnelSketchData: any[];
-  drillingData: any[];
-  surfaceData: any;
+  onExpand: (workPoint: WorkPoint, expanded: boolean) => void;
   onNavigate: (path: string) => void;
 }
 
@@ -30,17 +21,59 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
   workPoints,
   searchKeyword,
   onExpand,
-  loadingDetection,
-  detectionData,
-  selectedWorkPointId,
-  loadingForecastMethods,
-  geophysicalData,
-  palmSketchData,
-  tunnelSketchData,
-  drillingData,
-  surfaceData,
   onNavigate
 }) => {
+  // 本地状态管理 - 使用 Map 存储每个工点的数据
+  const [detectionDataMap, setDetectionDataMap] = useState<Record<string, any>>({});
+  const [geophysicalDataMap, setGeophysicalDataMap] = useState<Record<string, any[]>>({});
+  const [palmSketchDataMap, setPalmSketchDataMap] = useState<Record<string, any[]>>({});
+  const [tunnelSketchDataMap, setTunnelSketchDataMap] = useState<Record<string, any[]>>({});
+  const [drillingDataMap, setDrillingDataMap] = useState<Record<string, any[]>>({});
+  
+  const [loadingDetectionMap, setLoadingDetectionMap] = useState<Record<string, boolean>>({});
+  const [loadingForecastMap, setLoadingForecastMap] = useState<Record<string, boolean>>({});
+
+  // 加载工点详情数据
+  const loadWorkPointData = useCallback(async (workPointId: string) => {
+    // 设置加载状态
+    setLoadingDetectionMap(prev => ({ ...prev, [workPointId]: true }));
+    setLoadingForecastMap(prev => ({ ...prev, [workPointId]: true }));
+
+    try {
+      // 1. 加载探测数据
+      apiAdapter.getGeoPointDetectionData(workPointId)
+        .then(data => {
+          setDetectionDataMap(prev => ({ ...prev, [workPointId]: data }));
+        })
+        .catch(err => {
+          console.error('加载探测数据失败:', err);
+        })
+        .finally(() => {
+          setLoadingDetectionMap(prev => ({ ...prev, [workPointId]: false }));
+        });
+
+      // 2. 加载预报方法数据
+      Promise.all([
+        apiAdapter.getGeophysicalList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
+        apiAdapter.getPalmSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
+        apiAdapter.getTunnelSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
+        apiAdapter.getDrillingList({ pageNum: 1, pageSize: 10, siteId: workPointId })
+      ]).then(([geophysical, palmSketch, tunnelSketch, drilling]) => {
+        setGeophysicalDataMap(prev => ({ ...prev, [workPointId]: geophysical.records || [] }));
+        setPalmSketchDataMap(prev => ({ ...prev, [workPointId]: palmSketch.records || [] }));
+        setTunnelSketchDataMap(prev => ({ ...prev, [workPointId]: tunnelSketch.records || [] }));
+        setDrillingDataMap(prev => ({ ...prev, [workPointId]: drilling.records || [] }));
+      }).catch(err => {
+        console.error('加载预报方法数据失败:', err);
+      }).finally(() => {
+        setLoadingForecastMap(prev => ({ ...prev, [workPointId]: false }));
+      });
+
+    } catch (error) {
+      console.error('加载工点数据失败:', error);
+    }
+  }, []);
+
   return (
     <Spin loading={loading}>
       {workPoints.length === 0 ? (
@@ -58,17 +91,31 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
           expandIcon={<IconRight />}
           expandIconPosition="right"
           onChange={(key, keys) => {
-            if (typeof key === 'string' && keys.includes(key)) {
-              const workPoint = workPoints.find(wp => wp.id === key);
-              if (workPoint) {
-                onExpand(workPoint);
+            const currentKeys = Array.isArray(keys) ? keys : [keys];
+            // 对每个展开的 key，如果没有数据则加载
+            currentKeys.forEach(k => {
+              // 如果还没有该工点的数据且没有正在加载，则发起请求
+              // 注意：这里简单判断 detectionDataMap 是否有值，实际可能需要更严谨的判断
+              if (!detectionDataMap[k] && !loadingDetectionMap[k]) {
+                loadWorkPointData(k);
               }
-            }
+            });
           }}
         >
-          {workPoints.map((item) => (
-            <CollapseItem
-              key={item.id}
+          {workPoints.map((item) => {
+            // 获取当前工点的数据
+            const detectionData = detectionDataMap[item.id];
+            const geophysicalData = geophysicalDataMap[item.id] || [];
+            const palmSketchData = palmSketchDataMap[item.id] || [];
+            const tunnelSketchData = tunnelSketchDataMap[item.id] || [];
+            const drillingData = drillingDataMap[item.id] || [];
+            
+            const isLoadingDetection = loadingDetectionMap[item.id] || false;
+            const isLoadingForecast = loadingForecastMap[item.id] || false;
+            
+            return (
+              <CollapseItem
+                key={item.id}
               header={
                 <div style={{ 
                   display: 'flex', 
@@ -123,8 +170,8 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
                   style={{ marginBottom: '20px' }}
                   bodyStyle={{ padding: '24px' }}
                 >
-                  <Spin loading={loadingDetection}>
-                    {detectionData && selectedWorkPointId === item.id ? (
+                  <Spin loading={isLoadingDetection && !detectionData}> 
+                    {detectionData ? (
                       <DetectionChart data={detectionData} />
                     ) : (
                       <Empty description="暂无探测数据" style={{ padding: '60px 0' }} />
@@ -134,7 +181,7 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
 
                 {/* 五种预报方法选项卡 */}
                 <Card bodyStyle={{ padding: 0 }}>
-                  <Spin loading={loadingForecastMethods}>
+                  <Spin loading={isLoadingForecast && geophysicalData.length === 0}>
                     <Tabs defaultActiveTab="geophysical" type="card-gutter">
                       <TabPane key="geophysical" title={`物探法 (${geophysicalData.length})`}>
                         <div style={{ padding: '24px' }}>
@@ -223,13 +270,7 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
                       </TabPane>
                       <TabPane key="surface" title="地表补充">
                         <div style={{ padding: '24px' }}>
-                          {surfaceData ? (
-                            <div>
-                              <pre>{JSON.stringify(surfaceData, null, 2)}</pre>
-                            </div>
-                          ) : (
-                            <Empty description="暂无地表补充数据" />
-                          )}
+                          <Empty description="暂无地表补充数据" />
                         </div>
                       </TabPane>
                     </Tabs>
@@ -264,7 +305,8 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
                 </Card>
               </div>
             </CollapseItem>
-          ))}
+            );
+          })}
         </Collapse>
       )}
     </Spin>

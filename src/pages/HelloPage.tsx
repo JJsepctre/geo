@@ -38,19 +38,6 @@ function HelloPage() {
   const [loadingWorkPoints, setLoadingWorkPoints] = useState(false);
   const [loadingProject, setLoadingProject] = useState(false);
 
-  // 工点详情状态
-  const [selectedWorkPoint, setSelectedWorkPoint] = useState<WorkPoint | null>(null);
-  const [detectionData, setDetectionData] = useState<any>(null);
-  const [loadingDetection, setLoadingDetection] = useState(false);
-
-  // 五种预报方法数据状态
-  const [geophysicalData, setGeophysicalData] = useState<any[]>([]);
-  const [palmSketchData, setPalmSketchData] = useState<any[]>([]);
-  const [tunnelSketchData, setTunnelSketchData] = useState<any[]>([]);
-  const [drillingData, setDrillingData] = useState<any[]>([]);
-  const [surfaceData, setSurfaceData] = useState<any>(null);
-  const [loadingForecastMethods, setLoadingForecastMethods] = useState(false);
-
   // 统计数据状态
   const [statistics, setStatistics] = useState({
     totalTunnels: 0,
@@ -58,67 +45,21 @@ function HelloPage() {
     completedWorkPoints: 0,
     highRiskPoints: 0
   });
+  
+  // 原有的单状态保留用于兼容（如果需要），但建议全面迁移到Map
+  // 下面这些单一状态在多选展开时会导致“数据串味”
+  // const [selectedWorkPoint, setSelectedWorkPoint] = useState<WorkPoint | null>(null);
+  // const [detectionData, setDetectionData] = useState<any>(null);
+  // ...
 
-  // 加载工点探测数据
-  const loadWorkPointDetectionData = useCallback(async (workPointId: string) => {
-    setLoadingDetection(true);
-    try {
-      const data = await apiAdapter.getGeoPointDetectionData(workPointId);
-      setDetectionData(data);
-    } catch (error) {
-      console.error('加载探测数据失败:', error);
-      Message.error('加载探测数据失败');
-    } finally {
-      setLoadingDetection(false);
-    }
-  }, []);
-
-  // 加载五种预报方法数据
-  const loadForecastMethodsData = useCallback(async (workPointId: string) => {
-    console.log('🔄 开始加载预报方法数据，工点ID:', workPointId);
-    setLoadingForecastMethods(true);
-    try {
-      // 并行加载五种预报方法的数据
-      const [geophysical, palmSketch, tunnelSketch, drilling] = await Promise.all([
-        apiAdapter.getGeophysicalList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
-        apiAdapter.getPalmSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
-        apiAdapter.getTunnelSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
-        apiAdapter.getDrillingList({ pageNum: 1, pageSize: 10, siteId: workPointId })
-      ]);
-
-      console.log('📊 预报方法数据加载完成:', {
-        物探法: geophysical.records?.length || 0,
-        掌子面素描: palmSketch.records?.length || 0,
-        洞身素描: tunnelSketch.records?.length || 0,
-        钻探法: drilling.records?.length || 0
-      });
-
-      setGeophysicalData(geophysical.records || []);
-      setPalmSketchData(palmSketch.records || []);
-      setTunnelSketchData(tunnelSketch.records || []);
-      setDrillingData(drilling.records || []);
-
-      // 地表补充数据需要ybPk，暂时不加载
-      // const surface = await apiAdapter.getSurfaceSupplementInfo(ybPk);
-      // setSurfaceData(surface);
-    } catch (error) {
-      console.error('❌ 加载预报方法数据失败:', error);
-      Message.error('加载预报方法数据失败');
-    } finally {
-      setLoadingForecastMethods(false);
-    }
-  }, []);
-
+  // 移除 loadWorkPointDetectionData 和 loadForecastMethodsData 的具体实现
+  // 将它们移到 WorkPointList 组件内部处理，通过传递 apiAdapter 实例或者在组件内部引入
+  
   // 打开工点详情（展开折叠面板时）
-  const handleOpenWorkPointDetail = useCallback((workPoint: WorkPoint) => {
-    setSelectedWorkPoint(workPoint);
-    
-    // 加载探测数据
-    loadWorkPointDetectionData(workPoint.id);
-    
-    // 加载五种预报方法数据
-    loadForecastMethodsData(workPoint.id);
-  }, [loadWorkPointDetectionData, loadForecastMethodsData]);
+  // 这个回调现在只需要负责状态管理，不再负责数据加载
+  const handleOpenWorkPointDetail = useCallback((workPoint: WorkPoint, expanded: boolean) => {
+    // 数据加载逻辑已移至 WorkPointList 组件内部
+  }, []);
 
   // 计算统计数据
   const calculateStatistics = useCallback(async (tunnels?: Tunnel[]) => {
@@ -301,8 +242,8 @@ function HelloPage() {
   const handleTunnelSelect = useCallback((tunnelId: string) => {
     setSelectedTunnel(tunnelId);
     setWorkPointSearchKeyword(''); // 清空工点搜索
-    fetchWorkPoints(tunnelId);
-  }, [fetchWorkPoints]);
+    // fetchWorkPoints(tunnelId); // 不直接调用，而是通过 useEffect 依赖 selectedTunnel 触发
+  }, []);
 
   // 初始化数据
   useEffect(() => {
@@ -380,15 +321,6 @@ function HelloPage() {
               workPoints={filteredWorkPoints}
               searchKeyword={workPointSearchKeyword}
               onExpand={handleOpenWorkPointDetail}
-              loadingDetection={loadingDetection}
-              detectionData={detectionData}
-              selectedWorkPointId={selectedWorkPoint?.id}
-              loadingForecastMethods={loadingForecastMethods}
-              geophysicalData={geophysicalData}
-              palmSketchData={palmSketchData}
-              tunnelSketchData={tunnelSketchData}
-              drillingData={drillingData}
-              surfaceData={surfaceData}
               onNavigate={navigate}
             />
           </Card>
