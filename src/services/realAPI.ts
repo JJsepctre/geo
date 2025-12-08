@@ -2433,6 +2433,10 @@ class RealAPIService {
         
         conclusionyb: cleanData.conclusionyb || '',
         suggestion: cleanData.suggestion || '',
+        solution: cleanData.solution || '',  // 解决方案
+        remark: cleanData.remark || '',  // 备注
+        xcybff: cleanData.xcybff,  // 下次预报方法
+        xcybkslc: cleanData.xcybkslc || '',  // 下次预报开始里程
         
         // 状态字段
         flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,

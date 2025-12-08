@@ -224,17 +224,17 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
         borderCell
       />
 
-      {/* 底部下次预报表单 - 这是一个模拟，因为数据结构里没有明确对应字段 */}
+      {/* 底部下次预报表单 */}
       <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
          <div style={{ fontWeight: 'bold', marginBottom: 16 }}>下次超前地质预报</div>
          <Row gutter={24}>
              <Col span={12}>
-                 <FormItem label="下次预报方法" field="nextMethod_temp">
+                 <FormItem label="下次预报方法" field="xcybff">
                      <Select placeholder="请选择" options={METHOD_OPTIONS} />
                  </FormItem>
              </Col>
              <Col span={12}>
-                 <FormItem label="预报开始里程" field="nextStartKilo_temp">
+                 <FormItem label="预报开始里程" field="xcybkslc">
                      <Input placeholder="请输入" />
                  </FormItem>
              </Col>
