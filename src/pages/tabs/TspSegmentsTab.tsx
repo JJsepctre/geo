@@ -224,8 +224,8 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
         borderCell
       />
 
-      {/* 底部下次预报表单 */}
-      <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
+      {/* 底部下次预报表单 - 已隐藏，后端暂不支持这些字段 */}
+      {/* <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
          <div style={{ fontWeight: 'bold', marginBottom: 16 }}>下次超前地质预报</div>
          <Row gutter={24}>
              <Col span={12}>
@@ -239,7 +239,7 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
                  </FormItem>
              </Col>
          </Row>
-      </div>
+      </div> */}
 
       <Modal
         title={editingItem?.isNew ? '新增分段' : '编辑分段'}

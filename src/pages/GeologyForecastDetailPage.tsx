@@ -878,7 +878,268 @@ function GeologyForecastDetailPage() {
     )
   }
 
+  // 渲染电磁波反射基本信息
+  const renderDcbfsBasicInfo = () => {
+    if (!detailData) return null
+    
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e6eb' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500, width: '15%' }}>工程名称</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', width: '35%' }}>{detailData.sitename || detailData.dkname || '-'}</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500, width: '15%' }}>预报时间</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', width: '35%' }}>{detailData.monitordate ? detailData.monitordate.replace('T', ' ') : '-'}</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500 }}>掌子面里程</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px' }}>{detailData.dkname}{detailData.dkilo ? `+${detailData.dkilo}` : ''}</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500 }}>设备</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px' }}>{detailData.sbName || detailData.dcbfsSbname || '-'}</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500 }}>探测长度(m)</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px' }}>{detailData.ybLength || '-'}</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500 }}>天线工作频率(Mhz)</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px' }}>{detailData.txgzpl || detailData.dcbfsTxgzpl || '-'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // 渲染电磁波反射测线布置示意图
+  const renderDcbfsLayoutImage = () => {
+    if (!detailData) return null
+    
+    const layoutImage = detailData.pic1 || detailData.dcbfsPic1
+    
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e6eb' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500, width: '15%', verticalAlign: 'top' }}>测线布置示意图</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '16px', textAlign: 'center' }}>
+                {layoutImage ? (
+                  <Image
+                    src={layoutImage.startsWith('http') ? layoutImage : `/api/v1/file/${detailData.siteId}/dcbfs/${detailData.ybPk}/${layoutImage}`}
+                    alt="测线布置示意图"
+                    style={{ maxWidth: '100%', maxHeight: 300 }}
+                    preview
+                    error={
+                      <div style={{ padding: 40, color: '#86909c' }}>
+                        <div>图片加载失败</div>
+                        <div style={{ fontSize: 12, marginTop: 8 }}>UUID: {layoutImage}</div>
+                      </div>
+                    }
+                  />
+                ) : (
+                  <div style={{ padding: 40, color: '#86909c' }}>暂无图片</div>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // 渲染电磁波反射成果列表图
+  const renderDcbfsResultImages = () => {
+    if (!detailData) return null
+    
+    const images = [
+      { title: '波形图序列', url: detailData.pic2 || detailData.dcbfsPic2 },
+      { title: '波形彩图序列', url: detailData.pic3 || detailData.dcbfsPic3 },
+    ].filter(img => img.url)
+    
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e6eb' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500, width: '15%', verticalAlign: 'top' }}>成果列表图</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f7f8fa' }}>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500 }}>波形图序列</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500 }}>波形彩图序列</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500, width: 80 }}>操作 ⚙</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>
+                        {images[0]?.url || '-'}
+                      </td>
+                      <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>
+                        {images[1]?.url || '-'}
+                      </td>
+                      <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>
+                        <Button type="text" size="small">查看</Button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // 渲染电磁波反射结论表格
+  const renderDcbfsConclusionTable = () => {
+    if (!detailData) return null
+    
+    const ybjgList = detailData.ybjgVOList || detailData.ybjgDTOList || []
+    
+    // 风险等级颜色映射
+    const getRiskColor = (level: string | number) => {
+      const levelStr = String(level)
+      if (levelStr.includes('高') || levelStr === '3') return '#f53f3f'
+      if (levelStr.includes('中') || levelStr === '2') return '#ff7d00'
+      if (levelStr.includes('低') || levelStr === '1') return '#00b42a'
+      return '#1d2129'
+    }
+    
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e6eb' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #e5e6eb', padding: '12px 16px', backgroundColor: '#f7f8fa', fontWeight: 500, width: '15%', verticalAlign: 'top' }}>结论</td>
+              <td style={{ border: '1px solid #e5e6eb', padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f7f8fa' }}>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500, width: 60 }}>序号</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500 }}>里程范围</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500, width: 80 }}>长度</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500 }}>探测结论</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500, width: 100 }}>风险类别</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500, width: 100 }}>地质风险等级</th>
+                      <th style={{ border: '1px solid #e5e6eb', padding: '10px', fontWeight: 500, width: 60 }}>⚙</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ybjgList.length > 0 ? ybjgList.map((item: any, index: number) => (
+                      <tr key={item.ybjgPk || index}>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>{index + 1}</td>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px' }}>
+                          起{detailData.dkname}{item.sdkilo}
+                          <br />
+                          止{detailData.dkname}{item.edkilo}
+                        </td>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>
+                          {item.sdkilo && item.edkilo ? Math.abs(item.sdkilo - item.edkilo).toFixed(0) : '-'}
+                        </td>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px', fontSize: 13, lineHeight: 1.6 }}>
+                          {item.jlresult || '-'}
+                        </td>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>
+                          {item.risklevel || '-'}
+                        </td>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: 20,
+                            height: 20,
+                            backgroundColor: getRiskColor(item.wylevel || item.risklevel),
+                            borderRadius: 2
+                          }} />
+                        </td>
+                        <td style={{ border: '1px solid #e5e6eb', padding: '10px', textAlign: 'center' }}>-</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={7} style={{ border: '1px solid #e5e6eb', padding: '40px', textAlign: 'center', color: '#86909c' }}>
+                          暂无结论数据
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // 渲染电磁波反射详情页面
+  const renderDcbfsDetail = () => {
+    return (
+      <div style={{ padding: '24px 0' }}>
+        <div style={{ 
+          textAlign: 'center', 
+          fontSize: 18, 
+          fontWeight: 600, 
+          marginBottom: 24,
+          padding: '16px 0',
+          borderBottom: '2px solid #165DFF',
+          color: '#165DFF'
+        }}>
+          电磁波反射预报结果
+        </div>
+        {renderDcbfsBasicInfo()}
+        {renderDcbfsLayoutImage()}
+        {renderDcbfsResultImages()}
+        {renderDcbfsConclusionTable()}
+      </div>
+    )
+  }
+
   const methodName = method ? METHOD_MAP[parseInt(method)] : '详情'
+  const methodNum = method ? parseInt(method) : 0
+
+  // 根据不同的预报方法渲染不同的内容
+  const renderContent = () => {
+    // 电磁波反射 (method=4)
+    if (methodNum === 4) {
+      return (
+        <Tabs activeTab={activeTab} onChange={setActiveTab} type="line">
+          <TabPane key="result" title="电磁波预报结果">
+            {renderDcbfsDetail()}
+          </TabPane>
+        </Tabs>
+      )
+    }
+    
+    // 地震波反射 (method=1) 和其他方法使用默认渲染
+    return (
+      <Tabs activeTab={activeTab} onChange={setActiveTab} type="line">
+        <TabPane key="result" title="地震波预报结果">
+          <div style={{ padding: '24px 0' }}>
+            {renderBasicInfo()}
+            {renderCharts()}
+            {renderConclusionTable()}
+            {renderSuggestion()}
+            {renderFiles()}
+            {renderSignature()}
+          </div>
+        </TabPane>
+        
+        <TabPane key="physics" title="围岩参数物理学参数表">
+          <div style={{ padding: '24px 0' }}>
+            {renderPhysicsParams()}
+          </div>
+        </TabPane>
+        
+        <TabPane key="field" title="地震波现场数据记录表">
+          <div style={{ padding: '24px 0' }}>
+            {renderFieldData()}
+          </div>
+        </TabPane>
+      </Tabs>
+    )
+  }
 
   return (
     <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -908,30 +1169,7 @@ function GeologyForecastDetailPage() {
 
       <Card style={{ borderRadius: '0 0 4px 4px' }}>
         <Spin loading={loading} style={{ width: '100%' }}>
-          <Tabs activeTab={activeTab} onChange={setActiveTab} type="line">
-            <TabPane key="result" title="地震波预报结果">
-              <div style={{ padding: '24px 0' }}>
-                {renderBasicInfo()}
-                {renderCharts()}
-                {renderConclusionTable()}
-                {renderSuggestion()}
-                {renderFiles()}
-                {renderSignature()}
-              </div>
-            </TabPane>
-            
-            <TabPane key="physics" title="围岩参数物理学参数表">
-              <div style={{ padding: '24px 0' }}>
-                {renderPhysicsParams()}
-              </div>
-            </TabPane>
-            
-            <TabPane key="field" title="地震波现场数据记录表">
-              <div style={{ padding: '24px 0' }}>
-                {renderFieldData()}
-              </div>
-            </TabPane>
-          </Tabs>
+          {renderContent()}
         </Spin>
       </Card>
     </div>

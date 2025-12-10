@@ -636,6 +636,20 @@ function GeologyForecastPage() {
   }
 
   const handleAdd = () => {
+    // 对于只有一种方法的选项卡，直接跳转到编辑页面
+    if (activeTab === 'palmSketch') {
+      navigate(`/forecast/geology/edit/palmSketch/new?method=7&siteId=${siteId}`);
+      return;
+    }
+    if (activeTab === 'tunnelSketch') {
+      navigate(`/forecast/geology/edit/tunnelSketch/new?method=8&siteId=${siteId}`);
+      return;
+    }
+    if (activeTab === 'surface') {
+      navigate(`/forecast/geology/edit/surface/new?method=12&siteId=${siteId}`);
+      return;
+    }
+    // 物探法和钻探法需要选择具体方法
     addForm.resetFields()
     setAddVisible(true)
   }
@@ -933,26 +947,50 @@ function GeologyForecastPage() {
         </Spin>
       </div>
 
+      {/* 物探法新增弹窗 - 选择预报方法 */}
       <Modal
         title="新增地质预报"
         visible={addVisible}
         onOk={() => {
-          Message.success('新增成功')
-          setAddVisible(false)
-          fetchMethodData()
+          const selectedMethod = addForm.getFieldValue('method');
+          if (!selectedMethod) {
+            Message.warning('请选择预报方法');
+            return;
+          }
+          setAddVisible(false);
+          navigate(`/forecast/geology/edit/${activeTab}/new?method=${selectedMethod}&siteId=${siteId}`);
         }}
         onCancel={() => setAddVisible(false)}
-        style={{ width: 600 }}
+        style={{ width: 500 }}
+        okText="确定"
+        cancelText="取消"
+        mountOnEnter={false}
+        unmountOnExit={false}
       >
         <Form form={addForm} layout="vertical">
-          <Form.Item label="里程" field="dkilo" rules={[{ required: true, message: '请输入里程' }]}>
-            <Input placeholder="如 DK713+521.20" />
-          </Form.Item>
-          <Form.Item label="监测日期" field="monitordate">
-            <Input placeholder="监测日期" />
-          </Form.Item>
-          <Form.Item label="备注" field="addition">
-            <Input placeholder="备注信息" />
+          <Form.Item 
+            label="请选择预报方法" 
+            field="method" 
+            rules={[{ required: true, message: '请选择预报方法' }]}
+          >
+            <Select 
+              placeholder="请选择" 
+              style={{ width: '100%' }}
+              popupVisible={undefined}
+            >
+              {activeTab === 'geophysical' && [
+                <Select.Option key={1} value={1}>地震波反射</Select.Option>,
+                <Select.Option key={2} value={2}>水平声波剖面</Select.Option>,
+                <Select.Option key={3} value={3}>陆地声呐</Select.Option>,
+                <Select.Option key={4} value={4}>电磁波反射</Select.Option>,
+                <Select.Option key={5} value={5}>高分辨直流电</Select.Option>,
+                <Select.Option key={6} value={6}>瞬变电磁</Select.Option>,
+              ]}
+              {activeTab === 'drilling' && [
+                <Select.Option key={13} value={13}>超前水平钻</Select.Option>,
+                <Select.Option key={14} value={14}>加深炮孔</Select.Option>,
+              ]}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

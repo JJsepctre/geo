@@ -191,15 +191,15 @@ class APIAdapter {
       // 根据第二张图片的列结构映射数据
       const dkilo = item.dkilo;
       const startMileage = item.dkname && dkilo ? `${item.dkname}${dkilo.toFixed(3)}` : '';
-      const endMileage = item.sjdzLength ? 
-        `${item.dkname}${(dkilo + item.sjdzLength/1000).toFixed(3)}` : '';
-      
+      const endMileage = item.sjdzLength ?
+        `${item.dkname}${(dkilo + item.sjdzLength / 1000).toFixed(3)}` : '';
+
       // 模拟状态：根据创建时间或其他条件判断状态
       // 这里简单模拟：奇数ID为"编辑中"，偶数ID为"已上传"
       const itemId = item.sjdzPk ?? item.sjdzId ?? index;
       const status = itemId % 2 === 1 ? 'editing' : 'uploaded';
       const statusText = status === 'editing' ? '编辑中' : '已上传';
-      
+
       return {
         id: String(itemId),
         createdAt: item.gmtCreate || '',
@@ -235,7 +235,7 @@ class APIAdapter {
   private getGeologyMethodName(method: number): string {
     const methodMap: Record<number, string> = {
       1: '地质雷达',
-      2: '红外探测', 
+      2: '红外探测',
       3: '陆地声呐',
       4: '电磁波反射',
       5: '高分辨直流电',
@@ -253,7 +253,7 @@ class APIAdapter {
   private getGeologyInfluenceName(dzxxfj: number): string {
     const influenceMap: Record<number, string> = {
       1: '轻微',
-      2: '一般', 
+      2: '一般',
       3: '较复杂',
       4: '复杂',
       5: '极复杂'
@@ -286,7 +286,7 @@ class APIAdapter {
   }
 
   // ========== 预报设计管理（用于 ForecastDesignPage） ==========
-  
+
   /**
    * 获取预报设计列表
    */
@@ -298,14 +298,14 @@ class APIAdapter {
     endDate?: string;
   }) {
     const result = await realAPI.getForecastDesigns(params);
-    
+
     console.log('📊 [apiAdapter] getForecastDesigns 结果:', {
       total: result.total,
       listLength: result.list.length,
       page: params.page,
       pageSize: params.pageSize
     });
-    
+
     return result;
   }
 
@@ -491,12 +491,79 @@ class APIAdapter {
 
   /**
    * 创建物探法记录
+   * @param data 数据
+   * @param method 预报方法 (1=TSP, 2=HSP, 3=LDSN, 4=DCBFS, 5=GFBZLD, 6=SBDC)
    */
-  async createGeophysicalMethod(data: any): Promise<{ success: boolean }> {
+  async createGeophysicalMethod(data: any, method?: string | null): Promise<{ success: boolean }> {
     if (USE_REAL_API) {
-      return realAPI.createGeophysicalMethod(data);
+      return realAPI.createGeophysicalMethod(data, method);
     } else {
-      console.log('🎭 [apiAdapter] Mock createGeophysicalMethod:', data);
+      console.log('🎭 [apiAdapter] Mock createGeophysicalMethod:', data, method);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 创建 TSP 记录
+   */
+  async createTsp(data: any): Promise<any> {
+    if (USE_REAL_API) {
+      const res = await realAPI.createTsp(data);
+      // 适配返回值，确保包含 success 字段
+      if (res && (res.resultcode === 200 || (res as any).code === 200)) {
+        return { success: true, ...res };
+      }
+      return { success: false, ...res };
+    } else {
+      console.log('🎭 [apiAdapter] Mock createTsp:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 创建掌子面素描记录
+   */
+  async createPalmSketch(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createPalmSketch(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createPalmSketch:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 创建洞身素描记录
+   */
+  async createTunnelSketch(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createTunnelSketch(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createTunnelSketch:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 创建钻探法记录
+   */
+  async createDrilling(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createDrilling(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createDrilling:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 创建地表补充记录
+   */
+  async createSurfaceSupplement(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createSurfaceSupplement(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createSurfaceSupplement:', data);
       return { success: true };
     }
   }
@@ -582,11 +649,11 @@ class APIAdapter {
   private generateMockDesignInfo(workPointId: string, params?: { page?: number; pageSize?: number }) {
     // const page = params?.page || 1;  // 在真实分页场景中会使用
     const pageSize = params?.pageSize || 10;
-    
+
     // 生成设计信息Mock数据
     const total = Math.floor(Math.random() * 30) + 10;
     const list = [];
-    
+
     for (let i = 0; i < Math.min(pageSize, total); i++) {
       list.push({
         id: `design-${workPointId}-${i}`,
@@ -599,18 +666,18 @@ class APIAdapter {
         designTimes: Math.floor(Math.random() * 5) + 1
       });
     }
-    
+
     return { list, total };
   }
 
   private generateMockGeologyForecast(workPointId: string, params?: { page?: number; pageSize?: number }) {
     // const page = params?.page || 1;  // 在真实分页场景中会使用
     const pageSize = params?.pageSize || 10;
-    
+
     // 生成地质预报Mock数据
     const total = Math.floor(Math.random() * 25) + 8;
     const list = [];
-    
+
     for (let i = 0; i < Math.min(pageSize, total); i++) {
       list.push({
         id: `geology-${workPointId}-${i}`,
@@ -623,18 +690,18 @@ class APIAdapter {
         designTimes: Math.floor(Math.random() * 3) + 1
       });
     }
-    
+
     return { list, total };
   }
 
   private generateMockComprehensiveAnalysis(workPointId: string, params?: { page?: number; pageSize?: number }) {
     // const page = params?.page || 1;  // 在真实分页场景中会使用
     const pageSize = params?.pageSize || 10;
-    
+
     // 生成综合结论Mock数据
     const total = Math.floor(Math.random() * 20) + 5;
     const list = [];
-    
+
     for (let i = 0; i < Math.min(pageSize, total); i++) {
       list.push({
         id: `analysis-${workPointId}-${i}`,
@@ -647,7 +714,7 @@ class APIAdapter {
         designTimes: Math.floor(Math.random() * 4) + 1
       });
     }
-    
+
     return { list, total };
   }
 
@@ -655,7 +722,7 @@ class APIAdapter {
     const pageSize = params?.pageSize || 15;
     const total = Math.floor(Math.random() * 50) + 20;
     const records = [];
-    
+
     for (let i = 0; i < Math.min(pageSize, total); i++) {
       records.push({
         sjwydjPk: i + 1,
@@ -671,7 +738,7 @@ class APIAdapter {
         gmtModified: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
       });
     }
-    
+
     return {
       current: params?.pageNum || 1,
       size: pageSize,
@@ -685,7 +752,7 @@ class APIAdapter {
     const pageSize = params?.pageSize || 15;
     const total = Math.floor(Math.random() * 40) + 15;
     const records = [];
-    
+
     for (let i = 0; i < Math.min(pageSize, total); i++) {
       records.push({
         sjdzPk: i + 1,
@@ -701,7 +768,7 @@ class APIAdapter {
         gmtModified: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
       });
     }
-    
+
     return {
       current: params?.pageNum || 1,
       size: pageSize,
@@ -715,7 +782,7 @@ class APIAdapter {
     const pageSize = params?.pageSize || 15;
     const total = Math.floor(Math.random() * 60) + 30;
     const records = [];
-    
+
     const methods = [
       { code: 1, name: 'TSP' },
       { code: 2, name: 'HSP' },
@@ -725,7 +792,7 @@ class APIAdapter {
       { code: 6, name: '瞬变电磁' },
       { code: 9, name: '微震监测' }
     ];
-    
+
     for (let i = 0; i < Math.min(pageSize, total); i++) {
       const method = methods[Math.floor(Math.random() * methods.length)];
       records.push({
@@ -745,7 +812,7 @@ class APIAdapter {
         gmtModified: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
       });
     }
-    
+
     return {
       current: params?.pageNum || 1,
       size: pageSize,
@@ -872,12 +939,12 @@ class APIAdapter {
           gmtModified: '2024-01-22T10:15:00'
         }
       ];
-      return { 
-        records: mockData, 
-        total: mockData.length, 
-        current: 1, 
-        size: 10, 
-        pages: 1 
+      return {
+        records: mockData,
+        total: mockData.length,
+        current: 1,
+        size: 10,
+        pages: 1
       };
     }
   }
@@ -921,12 +988,12 @@ class APIAdapter {
           gmtModified: '2024-01-25T11:30:00'
         }
       ];
-      return { 
-        records: mockData, 
-        total: mockData.length, 
-        current: 1, 
-        size: 10, 
-        pages: 1 
+      return {
+        records: mockData,
+        total: mockData.length,
+        current: 1,
+        size: 10,
+        pages: 1
       };
     }
   }
@@ -972,12 +1039,12 @@ class APIAdapter {
           gmtModified: '2024-01-28T13:45:00'
         }
       ];
-      return { 
-        records: mockData, 
-        total: mockData.length, 
-        current: 1, 
-        size: 10, 
-        pages: 1 
+      return {
+        records: mockData,
+        total: mockData.length,
+        current: 1,
+        size: 10,
+        pages: 1
       };
     }
   }
@@ -1032,7 +1099,7 @@ class APIAdapter {
       // 将submitFlag设置为0表示撤回
       const withdrawData = { ...data, submitFlag: 0 };
       console.log('🔄 [apiAdapter] withdrawForecast 撤回数据:', { type, id, withdrawData });
-      
+
       switch (type) {
         case 'geophysical':
           return realAPI.updateGeophysicalMethod(id, withdrawData, data.method?.toString());
@@ -1105,9 +1172,9 @@ class APIAdapter {
   /**
    * 获取洞身素描详情
    */
-  
 
-  
+
+
 
   async copyGeophysical(id: string) {
     if (USE_REAL_API) {
