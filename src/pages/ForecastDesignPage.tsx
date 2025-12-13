@@ -486,13 +486,13 @@ function ForecastDesignPage() {
             <Input placeholder="如 DK713+920" />
           </Form.Item>
           <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入长度' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber min={0.01} max={99999999.99} step={0.01} precision={2} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="最小埋深(m)" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber min={0} step={1} precision={0} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="预报设计次数" field="designTimes" initialValue={1}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber min={1} step={1} precision={0} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>
@@ -530,7 +530,7 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="713" min={0} style={{ width: '140px' }} />
+                    <InputNumber placeholder="713" min={0} step={1} precision={0} style={{ width: '140px' }} />
                   </Form.Item>
                   <span style={{ margin: '0 8px' }}>+</span>
                   <Form.Item 
@@ -538,7 +538,7 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="375.00" min={0} max={999.99} step={0.01} precision={2} style={{ width: '140px' }} />
+                    <InputNumber placeholder="375" min={0} max={999} step={1} precision={0} style={{ width: '140px' }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
@@ -549,7 +549,7 @@ function ForecastDesignPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
-                <InputNumber placeholder="25" min={1} style={{ width: '100%' }} step={1} precision={0} />
+                <InputNumber placeholder="25.00" min={0.01} max={99999999.99} style={{ width: '100%' }} step={0.01} precision={2} />
               </Form.Item>
             </Col>
             <Col span={12}>

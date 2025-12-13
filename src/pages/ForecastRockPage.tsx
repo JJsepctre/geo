@@ -68,19 +68,25 @@ function ForecastRockPage() {
       1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI'
     }
     
+    // dkilo是总米数，如180973表示180公里973米
+    // 需要转换为 公里+米 格式显示
+    const totalMeters = item.dkilo || 0
+    const kilometers = Math.floor(totalMeters / 1000)  // 公里数
+    const meters = totalMeters % 1000                   // 米数
+    
     return {
       id: String(item.sjwydjPk),
       createdAt: item.gmtCreate,
       siteId: item.siteId || String(item.sitePk) || '',
       mileagePrefix: item.dkname,
-      startMileage: `${item.dkname}${Math.floor(item.dkilo)}+${Math.round((item.dkilo % 1) * 1000)}`,
+      startMileage: `${item.dkname}${kilometers}+${meters}`,  // 如 D1K180+973
       length: item.sjwydjLength,
       rockGrade: rockGradeMap[item.wydj] || 'IV',
       modifyReason: item.revise,
       author: item.username,
       bdPk: item.bdPk,    // 保存标段主键
       sdPk: item.sdPk,    // 保存隧道主键
-      dkilo: item.dkilo,  // 保存原始里程值
+      dkilo: item.dkilo,  // 保存原始里程值（米数）
       edkilo: item.edkilo, // 保存原始结束里程值
     }
   }
@@ -190,12 +196,25 @@ function ForecastRockPage() {
         'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6
       }
       
-      // 计算里程数字（米数）：公里*1000 + 米，带2位小数
-      // 如 D1K0+6 -> 0*1000 + 6 = 6.00
-      const startMileageSub = parseFloat(values.startMileageSub.toFixed(2))  // 确保米数带2位小数
-      const dkilo = parseFloat(((values.startMileageMain * 1000) + startMileageSub).toFixed(2))
-      // 计算结束里程 = 开始里程(米) + 预报长度(米)，带2位小数
-      const edkilo = parseFloat((dkilo + values.length).toFixed(2))
+      // 计算里程数字（米数）：公里*1000 + 米
+      // 如 D1K180+973 -> 180*1000 + 973 = 180973 米
+      // 表单输入：startMileageMain=180（公里），startMileageSub=973.01（米，可带小数）
+      const startMileageMain = parseFloat(values.startMileageMain) || 0
+      const startMileageSub = parseFloat(values.startMileageSub) || 0
+      const length = parseFloat(values.length) || 0
+      
+      // dkilo = 公里*1000 + 米，保留2位小数
+      const dkilo = parseFloat((startMileageMain * 1000 + startMileageSub).toFixed(2))
+      // endMileage = dkilo + length，保留2位小数
+      const endMileage = parseFloat((dkilo + length).toFixed(2))
+      
+      console.log('🔍 [设计围岩] 里程计算:', {
+        输入公里: startMileageMain,
+        输入米: startMileageSub,
+        计算dkilo: dkilo,
+        预报长度: length,
+        计算endMileage: endMileage
+      })
       
       // 编辑时优先使用表单值，如果为空则使用原始记录的值
       const dkname = values.mileagePrefix || (editingRecord?.mileagePrefix) || 'DK'
@@ -212,8 +231,8 @@ function ForecastRockPage() {
         sdPk: editingRecord.sdPk || 1,  // 隧道主键（必填）
         dkname: dkname,
         dkilo: dkilo,
-        endMileage: edkilo,
-        sjwydjLength: values.length,
+        endMileage: endMileage,  // dkilo + length，保留2位小数
+        sjwydjLength: length,
         wydj: rockGradeToNumber[values.rockGrade],
         revise: values.modifyReason || editingRecord?.modifyReason || '无',
       } : {
@@ -222,8 +241,8 @@ function ForecastRockPage() {
           siteId: siteId || '1',
           dkname: dkname,
           dkilo: dkilo,
-          endMileage: edkilo,
-          sjwydjLength: values.length,
+          endMileage: endMileage,  // dkilo + length，保留2位小数
+          sjwydjLength: length,
           wydj: rockGradeToNumber[values.rockGrade],
           revise: values.modifyReason || '无',
           username: values.author || localStorage.getItem('login') || 'admin',
@@ -570,11 +589,11 @@ function ForecastRockPage() {
           setEditingRecord(null)
           addForm.resetFields()
         }}
-        style={{ width: 700 }}
+        style={{ width: 800 }}
         okText="确定"
         cancelText="取消"
       >
-        <Form form={addForm} layout="horizontal" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
+        <Form form={addForm} layout="vertical">
           {/* 围岩等级 */}
           <Form.Item
             label="围岩等级"
@@ -584,41 +603,33 @@ function ForecastRockPage() {
             <Select
               placeholder="请选择围岩等级"
               options={rockGradeOptions}
-              style={{ width: 200 }}
             />
           </Form.Item>
 
           {/* 里程冠号 和 开始里程 */}
-          <Row>
-            <Col span={12}>
-              <Form.Item
-                label="里程冠号"
-                field="mileagePrefix"
-                rules={[{ required: true, message: '请输入里程冠号' }]}
-                initialValue="D2K"
-                labelCol={{ span: 12 }}
-                wrapperCol={{ span: 12 }}
-              >
-                <Input placeholder="D2K" style={{ width: 100 }} />
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="里程冠号" field="mileagePrefix" rules={[{ required: true, message: '请输入里程冠号' }]} initialValue="DK">
+                <Input placeholder="DK" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item label="开始里程" required labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
-                <Space>
+            <Col span={16}>
+              <Form.Item label="开始里程" required>
+                <Space style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                   <Form.Item 
                     field="startMileageMain" 
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="683" min={0} style={{ width: 80 }} />
+                    <InputNumber placeholder="713" min={0} step={1} precision={0} style={{ width: '140px' }} />
                   </Form.Item>
-                  <span>+</span>
+                  <span style={{ margin: '0 8px' }}>+</span>
                   <Form.Item 
                     field="startMileageSub" 
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="925.00" min={0} step={0.01} precision={2} style={{ width: 100 }} />
+                    <InputNumber placeholder="375" min={0} max={999} step={1} precision={0} style={{ width: '140px' }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
@@ -626,47 +637,27 @@ function ForecastRockPage() {
           </Row>
 
           {/* 预报长度 和 填写人 */}
-          <Row>
+          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="预报长度"
-                field="length"
-                rules={[{ required: true, message: '请输入预报长度' }]}
-                labelCol={{ span: 12 }}
-                wrapperCol={{ span: 12 }}
-              >
-                <InputNumber placeholder="25.00" style={{ width: 100 }} step={0.01} />
+              <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
+                <InputNumber placeholder="25.00" min={0.01} max={99999999.99} style={{ width: '100%' }} step={0.01} precision={2} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="填写人"
-                field="author"
-                rules={[{ required: true, message: '请选择填写人' }]}
-                labelCol={{ span: 8 }}
-                wrapperCol={{ span: 16 }}
-              >
-                <Select
-                  placeholder="请选择填写人"
-                  style={{ width: 150 }}
-                  options={[
-                    { label: '张永海', value: '张永海' },
-                    { label: '冯文波', value: '冯文波' },
-                    { label: '一分部', value: '一分部' },
-                    { label: '二分部', value: '二分部' },
-                    { label: '三分部', value: '三分部' }
-                  ]}
-                />
+              <Form.Item label="填写人" field="author" rules={[{ required: true, message: '请选择填写人' }]}>
+                <Select placeholder="请选择填写人" options={[
+                  { label: '冯文波', value: '冯文波' },
+                  { label: '一分部', value: '一分部' },
+                  { label: '二分部', value: '二分部' },
+                  { label: '三分部', value: '三分部' }
+                ]} />
               </Form.Item>
             </Col>
           </Row>
 
           {/* 修改原因说明 */}
-          <Form.Item label="修改原因说明" field="modifyReason" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
-            <Input.TextArea
-              placeholder="请输入修改原因"
-              rows={3}
-            />
+          <Form.Item label="修改原因说明" field="modifyReason">
+            <Input.TextArea placeholder="请输入修改原因" rows={3} />
           </Form.Item>
         </Form>
       </Modal>

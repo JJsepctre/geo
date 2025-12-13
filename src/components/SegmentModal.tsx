@@ -134,11 +134,11 @@ function SegmentModal({ visible, onCancel, onOk, editingData, defaultDkname = 'X
             <Form.Item label="开始里程" rules={[{ required: true, message: '请输入开始里程' }]}>
               <Input.Group>
                 <Form.Item field="sdkilo" noStyle>
-                  <InputNumber placeholder="0" style={{ width: '45%' }} />
+                  <InputNumber placeholder="713" min={0} step={1} precision={0} style={{ width: '45%' }} />
                 </Form.Item>
                 <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
                 <Form.Item field="sdkiloEnd" noStyle>
-                  <InputNumber placeholder="250" style={{ width: '45%' }} />
+                  <InputNumber placeholder="375" min={0} max={999} step={1} precision={0} style={{ width: '45%' }} />
                 </Form.Item>
               </Input.Group>
             </Form.Item>
@@ -147,11 +147,11 @@ function SegmentModal({ visible, onCancel, onOk, editingData, defaultDkname = 'X
             <Form.Item label="结束里程" rules={[{ required: true, message: '请输入结束里程' }]}>
               <Input.Group>
                 <Form.Item field="edkilo" noStyle>
-                  <InputNumber placeholder="0" style={{ width: '45%' }} />
+                  <InputNumber placeholder="713" min={0} step={1} precision={0} style={{ width: '45%' }} />
                 </Form.Item>
                 <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
                 <Form.Item field="edkiloEnd" noStyle>
-                  <InputNumber placeholder="240" style={{ width: '45%' }} />
+                  <InputNumber placeholder="400" min={0} max={999} step={1} precision={0} style={{ width: '45%' }} />
                 </Form.Item>
               </Input.Group>
             </Form.Item>

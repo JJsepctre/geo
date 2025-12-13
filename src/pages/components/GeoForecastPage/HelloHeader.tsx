@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Dropdown, Menu, Space, Avatar, Typography } from '@arco-design/web-react';
+import { Layout, Dropdown, Menu, Space, Avatar, Typography, Message } from '@arco-design/web-react';
 import { IconUser, IconDown } from '@arco-design/web-react/icon';
 
 const { Header } = Layout;
@@ -11,6 +11,22 @@ interface HelloHeaderProps {
 }
 
 const HelloHeader: React.FC<HelloHeaderProps> = ({ onNavigate, activeTab = 'forecast' }) => {
+  const handleMenuClick = (key: string) => {
+    if (key === 'logout') {
+      // 清除登录信息
+      localStorage.removeItem('token');
+      localStorage.removeItem('login');
+      localStorage.removeItem('userInfo');
+      Message.success('退出登录成功');
+      // 跳转到登录页
+      onNavigate('/login');
+    } else if (key === 'profile') {
+      Message.info('个人中心功能开发中');
+    } else if (key === 'settings') {
+      Message.info('设置功能开发中');
+    }
+  };
+
   const userMenuItems = [
     { key: 'profile', label: '个人中心' },
     { key: 'settings', label: '设置' },
@@ -90,7 +106,7 @@ const HelloHeader: React.FC<HelloHeaderProps> = ({ onNavigate, activeTab = 'fore
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
         <Dropdown 
           droplist={
-            <Menu>
+            <Menu onClickMenuItem={handleMenuClick}>
               {userMenuItems.map(item => (
                 <Menu.Item key={item.key}>{item.label}</Menu.Item>
               ))}

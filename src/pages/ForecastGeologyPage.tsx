@@ -529,11 +529,11 @@ function ForecastGeologyPage() {
               <Form.Item label="开始里程" required>
                 <Space>
                   <Form.Item field="startMileageMain" noStyle rules={[{ required: true, message: '请输入' }]}>
-                    <InputNumber placeholder="0" style={{ width: 80 }} />
+                    <InputNumber placeholder="713" min={0} step={1} precision={0} style={{ width: 100 }} />
                   </Form.Item>
-                  <span>-</span>
+                  <span>+</span>
                   <Form.Item field="startMileageSub" noStyle rules={[{ required: true, message: '请输入' }]}>
-                    <InputNumber placeholder="0" style={{ width: 80 }} />
+                    <InputNumber placeholder="375" min={0} max={999} step={1} precision={0} style={{ width: 100 }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
@@ -543,17 +543,17 @@ function ForecastGeologyPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="预报长度"
+                label="预报长度(m)"
                 field="sjdzLength"
                 rules={[{ required: true, message: '请输入预报长度' }]}
-                extra="单位:m，保留2位小数，整数位不超过8位，大里程填正数，小里程填负数"
               >
                 <InputNumber 
-                  placeholder="请输入" 
+                  placeholder="25.00" 
                   style={{ width: '100%' }} 
-                  precision={2}
+                  min={0.01}
                   max={99999999.99}
-                  min={-99999999.99}
+                  step={0.01}
+                  precision={2}
                 />
               </Form.Item>
             </Col>
