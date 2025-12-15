@@ -608,6 +608,99 @@ class APIAdapter {
     }
   }
 
+  /**
+   * 获取水平声波剖面详情 (HSP)
+   */
+  async getHspDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getHspDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getHspDetail(ybPk);
+      console.log('🔍 [apiAdapter] getHspDetail 结果:', result);
+      return result;
+    } else {
+      // Mock实现
+      console.log('🎭 [apiAdapter] getHspDetail Mock模式');
+      return null;
+    }
+  }
+
+  /**
+   * 获取陆地声纳详情 (LDSN)
+   */
+  async getLdsnDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getLdsnDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getLdsnDetail(ybPk);
+      console.log('🔍 [apiAdapter] getLdsnDetail 结果:', result);
+      return result;
+    } else {
+      // Mock实现
+      console.log('🎭 [apiAdapter] getLdsnDetail Mock模式');
+      return null;
+    }
+  }
+
+  /**
+   * 获取电磁波反射详情 (DCBFS)
+   */
+  async getDcbfsDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getDcbfsDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getDcbfsDetail(ybPk);
+      console.log('🔍 [apiAdapter] getDcbfsDetail 结果:', result);
+      return result;
+    } else {
+      // Mock实现
+      console.log('🎭 [apiAdapter] getDcbfsDetail Mock模式');
+      return null;
+    }
+  }
+
+  /**
+   * 获取高分辨直流电详情 (GFBZLD)
+   */
+  async getGfbzldDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getGfbzldDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getGfbzldDetail(ybPk);
+      console.log('🔍 [apiAdapter] getGfbzldDetail 结果:', result);
+      return result;
+    } else {
+      console.log('🎭 [apiAdapter] getGfbzldDetail Mock模式');
+      return null;
+    }
+  }
+
+  /**
+   * 获取瞬变电磁详情 (SBDC)
+   */
+  async getSbdcDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getSbdcDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getSbdcDetail(ybPk);
+      console.log('🔍 [apiAdapter] getSbdcDetail 结果:', result);
+      return result;
+    } else {
+      console.log('🎭 [apiAdapter] getSbdcDetail Mock模式');
+      return null;
+    }
+  }
+
+  /**
+   * 获取微震监测详情 (WZJC)
+   */
+  async getWzjcDetail(ybPk: string): Promise<any> {
+    console.log('🔍 [apiAdapter] getWzjcDetail 调用, ybPk:', ybPk, 'USE_REAL_API:', USE_REAL_API);
+    if (USE_REAL_API) {
+      const result = await realAPI.getWzjcDetail(ybPk);
+      console.log('🔍 [apiAdapter] getWzjcDetail 结果:', result);
+      return result;
+    } else {
+      console.log('🎭 [apiAdapter] getWzjcDetail Mock模式');
+      return null;
+    }
+  }
+
   // ========== Mock数据生成方法 ==========
 
   private generateMockDetectionData(workPointId: string) {

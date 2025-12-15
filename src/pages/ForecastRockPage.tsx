@@ -231,21 +231,16 @@ function ForecastRockPage() {
         sdPk: editingRecord.sdPk || 1,  // 隧道主键（必填）
         dkname: dkname,
         dkilo: dkilo,
-        endMileage: endMileage,  // dkilo + length，保留2位小数
         sjwydjLength: length,
         wydj: rockGradeToNumber[values.rockGrade],
-        revise: values.modifyReason || editingRecord?.modifyReason || '无',
       } : {
         // 新增时的数据格式（包装在 sjwydj 里）
         sjwydj: {
           siteId: siteId || '1',
           dkname: dkname,
           dkilo: dkilo,
-          endMileage: endMileage,  // dkilo + length，保留2位小数
           sjwydjLength: length,
           wydj: rockGradeToNumber[values.rockGrade],
-          revise: values.modifyReason || '无',
-          username: values.author || localStorage.getItem('login') || 'admin',
           bdPk: 1,
           sdPk: 1,
         }
@@ -636,28 +631,9 @@ function ForecastRockPage() {
             </Col>
           </Row>
 
-          {/* 预报长度 和 填写人 */}
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
-                <InputNumber placeholder="25.00" min={0.01} max={99999999.99} style={{ width: '100%' }} step={0.01} precision={2} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="填写人" field="author" rules={[{ required: true, message: '请选择填写人' }]}>
-                <Select placeholder="请选择填写人" options={[
-                  { label: '冯文波', value: '冯文波' },
-                  { label: '一分部', value: '一分部' },
-                  { label: '二分部', value: '二分部' },
-                  { label: '三分部', value: '三分部' }
-                ]} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* 修改原因说明 */}
-          <Form.Item label="修改原因说明" field="modifyReason">
-            <Input.TextArea placeholder="请输入修改原因" rows={3} />
+          {/* 预报长度 */}
+          <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]} extra="保留2位小数，整数位不得超过8位，且大于0">
+            <InputNumber placeholder="25.00" min={0.01} max={99999999.99} style={{ width: '100%' }} step={1} precision={2} />
           </Form.Item>
         </Form>
       </Modal>

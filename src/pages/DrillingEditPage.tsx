@@ -102,7 +102,14 @@ function DrillingEditPage() {
         // 调用详情接口
         const detail = await apiAdapter.getDrillingDetail(id, method)
         if (detail) {
-          form.setFieldsValue(detail)
+          // 里程拆分：将 dkilo 拆分为 dkiloKm 和 dkiloM
+          let dkiloKm, dkiloM;
+          if (detail.dkilo !== undefined && detail.dkilo !== null) {
+            dkiloKm = Math.floor(detail.dkilo / 1000);
+            dkiloM = detail.dkilo % 1000;
+          }
+          const formData = { ...detail, dkiloKm, dkiloM };
+          form.setFieldsValue(formData)
           setOriginalData(detail) // 保存原始数据
           
           // 设置钻孔列表
@@ -149,15 +156,22 @@ function DrillingEditPage() {
       // 获取当前预报方法（从URL参数）
       const currentMethod = parseInt(method || '13', 10)  // 默认超前水平钻(13)
       
+      // 里程合并：将 dkiloKm 和 dkiloM 合并为 dkilo
+      const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
+      
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
       const submitData = {
         ...originalData,  // 先用原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
+        dkilo,            // 使用合并后的里程值
         ybPk: null,       // 临时设置为null，后端修复后改回
         siteId: siteId || originalData?.siteId,
         method: currentMethod,  // 钻探法：13=超前水平钻，14=加深炮孔
         zkList
       }
+      // 清理临时字段
+      delete submitData.dkiloKm;
+      delete submitData.dkiloM;
       
       console.log('📤 [钻探法] 提交数据:', submitData, '是否新增:', isNew, 'method:', currentMethod)
       
@@ -527,12 +541,12 @@ function DrillingEditPage() {
                   <Col span={8}>
                     <Form.Item label="掌子面里程" required>
                       <Space>
-                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
-                          <InputNumber placeholder="713" style={{ width: 100 }} precision={0} />
+                        <Form.Item field="dkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber placeholder="180" style={{ width: 100 }} precision={0} min={0} />
                         </Form.Item>
                         <span>+</span>
-                        <Form.Item field="dkiloPlus" noStyle>
-                          <InputNumber placeholder="973.2" style={{ width: 100 }} precision={1} />
+                        <Form.Item field="dkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber placeholder="972" style={{ width: 100 }} precision={0} min={0} max={999} />
                         </Form.Item>
                       </Space>
                     </Form.Item>

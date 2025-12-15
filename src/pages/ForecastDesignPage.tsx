@@ -7,7 +7,7 @@ import OperationButtons from '../components/OperationButtons'
 
 type ForecastMethodOption = {
   label: string
-  value: string
+  value: number
 }
 
 type ForecastRecord = {
@@ -54,9 +54,18 @@ function ForecastDesignPage() {
 
   const methodOptions: ForecastMethodOption[] = useMemo(
     () => [
-      { label: '方法A', value: 'A' },
-      { label: '方法B', value: 'B' },
-      { label: '方法C', value: 'C' },
+      { label: '其他', value: 0 },
+      { label: '地震波反射', value: 1 },
+      { label: '水平声波剖面', value: 2 },
+      { label: '陆地声呐', value: 3 },
+      { label: '电磁波反射', value: 4 },
+      { label: '高分辨直流电', value: 5 },
+      { label: '瞬变电磁', value: 6 },
+      { label: '掌子面素描', value: 7 },
+      { label: '洞身素描', value: 8 },
+      { label: '地表补充地质调查', value: 12 },
+      { label: '超前水平钻', value: 13 },
+      { label: '加深炮孔', value: 14 },
     ],
     []
   )
@@ -485,13 +494,19 @@ function ForecastDesignPage() {
           <Form.Item label="结束里程" field="endMileage" rules={[{ required: true, message: '请输入结束里程' }]}>
             <Input placeholder="如 DK713+920" />
           </Form.Item>
-          <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入长度' }]}>
-            <InputNumber min={0.01} max={99999999.99} step={0.01} precision={2} style={{ width: '100%' }} />
+          <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入长度' }]} extra="保留2位小数，整数位不得超过8位，且大于0">
+            <InputNumber min={0.01} max={99999999.99} step={1} precision={2} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="最小埋深(m)" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
+          <Form.Item label="最小埋深(m)" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]} extra="保留2位小数，整数位不得超过4位">
+            <InputNumber min={0} max={9999.99} step={1} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="钻孔数量" field="drillingCount" initialValue={0} extra="预报方法为超前水平钻和加深炮孔必填，其余填0">
             <InputNumber min={0} step={1} precision={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="预报设计次数" field="designTimes" initialValue={1}>
+          <Form.Item label="取芯数量" field="coreCount" initialValue={0} extra="预报方法为超前水平钻时必填，其余填0">
+            <InputNumber min={0} step={1} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="预报设计次数" field="designTimes" initialValue={1} extra="可多次一起填写">
             <InputNumber min={1} step={1} precision={0} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
@@ -548,13 +563,13 @@ function ForecastDesignPage() {
           {/* 预报长度 和 最小埋深 */}
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
-                <InputNumber placeholder="25.00" min={0.01} max={99999999.99} style={{ width: '100%' }} step={0.01} precision={2} />
+              <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]} extra="保留2位小数，整数位不得超过8位，且大于0">
+                <InputNumber placeholder="25.00" min={0.01} max={99999999.99} style={{ width: '100%' }} step={1} precision={2} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="最小埋深(m)" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
-                <InputNumber placeholder="155" min={0} style={{ width: '100%' }} step={1} precision={0} />
+              <Form.Item label="最小埋深(m)" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]} extra="保留2位小数，整数位不得超过4位">
+                <InputNumber placeholder="155.00" min={0} max={9999.99} style={{ width: '100%' }} step={1} precision={2} />
               </Form.Item>
             </Col>
           </Row>
@@ -562,12 +577,12 @@ function ForecastDesignPage() {
           {/* 钻孔数量 和 取芯数量 */}
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="钻孔数量" field="drillingCount" rules={[{ required: true, message: '请输入钻孔数量' }]} initialValue={1}>
+              <Form.Item label="钻孔数量" field="drillingCount" rules={[{ required: true, message: '请输入钻孔数量' }]} initialValue={1} extra="预报方法为超前水平钻和加深炮孔必填，其余填0">
                 <InputNumber placeholder="1" min={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="取芯数量" field="coreCount" rules={[{ required: true, message: '请输入取芯数量' }]} initialValue={0}>
+              <Form.Item label="取芯数量" field="coreCount" rules={[{ required: true, message: '请输入取芯数量' }]} initialValue={0} extra="预报方法为超前水平钻时必填，其余填0">
                 <InputNumber placeholder="0" min={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -576,7 +591,7 @@ function ForecastDesignPage() {
           {/* 设计次数 和 填写人 */}
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="设计次数" field="designTimes" rules={[{ required: true, message: '请输入设计次数' }]} initialValue={1}>
+              <Form.Item label="设计次数" field="designTimes" rules={[{ required: true, message: '请输入设计次数' }]} initialValue={1} extra="可多次一起填写">
                 <InputNumber placeholder="1" min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>

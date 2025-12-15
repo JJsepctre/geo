@@ -286,35 +286,41 @@ function ForecastGeologyPage() {
       const dkilo = (values.startMileageMain || 0) * 1000 + (values.startMileageSub || 0)
       
       if (editingRecord) {
-        // 更新时的数据格式
+        // 更新时的数据格式 - 需要包装在 sjdz 对象中
         const updateData = {
-          sjdzPk: editingRecord.sjdzPk,
-          sdPk: editingRecord.sjdzPk,
-          dkname: values.dkname,
-          dkilo: dkilo,
-          method: values.method,
-          sjdzLength: values.sjdzLength,
-          dzxxfj: values.dzxxfj,
-          remark: values.remark || '',
+          sjdz: {
+            sjdzPk: editingRecord.sjdzPk,
+            bdPk: 1,
+            sdPk: 1,
+            dkname: values.dkname,
+            dkilo: dkilo,
+            method: values.method,
+            sjdzLength: values.sjdzLength,
+            dzxxfj: values.dzxxfj,
+            remark: values.remark || '',
+          }
         }
         
         console.log('📤 [设计地质] 更新数据:', updateData)
         await realAPI.updateDesignGeology(String(editingRecord.sjdzPk), updateData)
         Message.success('更新成功')
       } else {
-        // 新增时的数据格式 - 根据API参数
+        // 新增时的数据格式 - 需要包装在 sjdz 对象中
+        // 使用当前工点的 siteId 作为 sdPk，确保数据关联到正确的工点
         const createData = {
-          bdPk: 1,
-          sdPk: 1,
-          dkname: values.dkname,
-          dkilo: dkilo,
-          method: values.method,
-          sjdzLength: values.sjdzLength,
-          dzxxfj: values.dzxxfj,
-          remark: values.remark || '',
+          sjdz: {
+            bdPk: 1,
+            sdPk: siteId ? Number(siteId) : 1,
+            dkname: values.dkname,
+            dkilo: dkilo,
+            method: values.method,
+            sjdzLength: values.sjdzLength,
+            dzxxfj: values.dzxxfj,
+            remark: values.remark || '',
+          }
         }
         
-        console.log('📤 [设计地质] 创建数据:', createData)
+        console.log('📤 [设计地质] 创建数据:', createData, 'siteId:', siteId)
         await realAPI.createDesignGeology(createData as any)
         Message.success('创建成功')
       }
@@ -546,13 +552,14 @@ function ForecastGeologyPage() {
                 label="预报长度(m)"
                 field="sjdzLength"
                 rules={[{ required: true, message: '请输入预报长度' }]}
+                extra="保留2位小数，整数位不得超过8位，且大于0"
               >
                 <InputNumber 
                   placeholder="25.00" 
                   style={{ width: '100%' }} 
                   min={0.01}
                   max={99999999.99}
-                  step={0.01}
+                  step={1}
                   precision={2}
                 />
               </Form.Item>

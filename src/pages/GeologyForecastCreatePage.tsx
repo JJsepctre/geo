@@ -18,6 +18,7 @@ import {
 } from '@arco-design/web-react';
 import { IconLeft, IconSave, IconPlus, IconDelete } from '@arco-design/web-react/icon';
 import apiAdapter from '../services/apiAdapter';
+import SegmentModal, { SegmentData } from '../components/SegmentModal';
 import { formatDateForAPI } from '../utils/dateUtils';
 
 const { TextArea } = Input;
@@ -63,11 +64,10 @@ function GeologyForecastCreatePage() {
   const methodNum = methodParam ? parseInt(methodParam) : 1;
   
   const [form] = Form.useForm();
-  const [segmentForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [segments, setSegments] = useState<any[]>([]);
   const [segmentModalVisible, setSegmentModalVisible] = useState(false);
-  const [editingSegmentIndex, setEditingSegmentIndex] = useState<number | null>(null);
+  const [editingSegment, setEditingSegment] = useState<SegmentData | null>(null);
   
   // 电磁波反射 - 测线布置信息
   const [cxLines, setCxLines] = useState<any[]>([]);
@@ -89,49 +89,33 @@ function GeologyForecastCreatePage() {
 
   // 打开新增分段弹窗
   const handleOpenSegmentModal = () => {
-    setEditingSegmentIndex(null);
-    segmentForm.resetFields();
-    segmentForm.setFieldsValue({
-      dkname: form.getFieldValue('dkname') || 'DK',
-      sdkilo: 0,
-      edkilo: 0,
-      ybjgTime: new Date().toISOString().split('T')[0],
-      risklevel: '',
-      grade: 0,
-      dzjb: 'green',
-      jlresult: '',
-    });
+    setEditingSegment(null);
     setSegmentModalVisible(true);
   };
 
   // 打开编辑分段弹窗
   const handleEditSegment = (index: number) => {
-    setEditingSegmentIndex(index);
-    segmentForm.setFieldsValue(segments[index]);
+    setEditingSegment({ ...segments[index], _index: index });
     setSegmentModalVisible(true);
   };
 
   // 确认添加/编辑分段
-  const handleConfirmSegment = async () => {
-    try {
-      const values = await segmentForm.validate();
-      if (editingSegmentIndex !== null) {
-        // 编辑模式
-        const newSegments = [...segments];
-        newSegments[editingSegmentIndex] = values;
-        setSegments(newSegments);
-      } else {
-        // 新增模式
-        setSegments([...segments, values]);
-      }
-      setSegmentModalVisible(false);
-    } catch (e) {
-      // 表单验证失败
+  const handleConfirmSegment = (data: SegmentData) => {
+    const segmentWithIndex = editingSegment as any;
+    if (segmentWithIndex && segmentWithIndex._index !== undefined) {
+      // 编辑模式
+      const newSegments = [...segments];
+      newSegments[segmentWithIndex._index] = data;
+      setSegments(newSegments);
+    } else {
+      // 新增模式
+      setSegments([...segments, data]);
     }
+    setSegmentModalVisible(false);
   };
 
   // 围岩等级映射
-  const gradeMap: Record<number, string> = { 1: 'I级', 2: 'II级', 3: 'III级', 4: 'IV级', 5: 'V级', 6: 'VI级' };
+  const gradeMap: Record<number, string> = { 1: 'Ⅰ级', 2: 'Ⅱ级', 3: 'Ⅲ级', 4: 'Ⅳ级', 5: 'Ⅴ级', 6: 'Ⅵ级' };
 
   // 分段信息表格列定义
   const segmentColumns = [
@@ -141,9 +125,20 @@ function GeologyForecastCreatePage() {
     { title: '结束里程值', dataIndex: 'edkilo', width: 100 },
     { title: '生产时间', dataIndex: 'ybjgTime', width: 150 },
     { title: '风险类别', dataIndex: 'risklevel', width: 100 },
-    { title: '地质现象', dataIndex: 'jlresult', width: 120 },
-    { title: '围岩等级', dataIndex: 'grade', width: 100, render: (v: number) => gradeMap[v] || v },
-    { title: '预报结论', dataIndex: 'ybjl', width: 120 },
+    { title: '地质现象', dataIndex: 'dzjb', width: 100, render: (v: string) => {
+      const colorMap: Record<string, { bg: string; text: string; label: string }> = {
+        'green': { bg: '#52c41a', text: '#fff', label: '绿色' },
+        'yellow': { bg: '#faad14', text: '#fff', label: '黄色' },
+        'red': { bg: '#ff4d4f', text: '#fff', label: '红色' },
+      };
+      const config = colorMap[v];
+      if (config) {
+        return <span style={{ backgroundColor: config.bg, color: config.text, padding: '2px 8px', borderRadius: 4 }}>{config.label}</span>;
+      }
+      return v || '-';
+    }},
+    { title: '围岩等级', dataIndex: 'wylevel', width: 100, render: (v: number) => gradeMap[v] || v || '-' },
+    { title: '预报结论', dataIndex: 'jlresult', width: 120, ellipsis: true },
     {
       title: '操作',
       width: 120,
@@ -381,13 +376,16 @@ function GeologyForecastCreatePage() {
 
   // 构建提交数据 - 根据不同方法构建不同的数据结构
   const buildSubmitData = (values: any): any => {
+    // 里程合并：将 dkiloKm 和 dkiloM 合并为 dkilo
+    const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
+    
     const baseData = {
       ybPk: 0,  // 新增时为0
       ybId: 0,  // 新增时为0
       siteId: String(siteId),
       method: methodNum,
       dkname: values.dkname || 'DK',
-      dkilo: values.dkilo ? Number(values.dkilo) : 0,
+      dkilo: dkilo,
       ybLength: values.ybLength ? Number(values.ybLength) : 0,
       monitordate: formatDateForAPI(values.monitordate),
       createdate: formatDateForAPI(new Date()),
@@ -407,16 +405,16 @@ function GeologyForecastCreatePage() {
       flag: 0,
       submitFlag: 0,
       ybjgDTOList: segments.map((seg, idx) => ({
-        ybjgPk: 0,
-        ybjgId: 0,  // 新增时都为0
-        ybPk: 0,
+        ybjgPk: null,  // 新增时设为null
+        ybjgId: null,  // 新增时设为null
+        ybPk: null,    // 新增时设为null
         dkname: seg.dkname || 'DK',
         sdkilo: Number(seg.sdkilo) || 0,
         edkilo: Number(seg.edkilo) || 0,
         ybjgTime: formatDateForAPI(seg.ybjgTime),
         risklevel: seg.risklevel || '',
-        grade: Number(seg.grade) || 0,
-        wylevel: Number(seg.grade) || 0,  // wylevel和grade保持一致
+        grade: Number(seg.wylevel) || 1,  // grade使用wylevel的值
+        wylevel: Number(seg.wylevel) || 1,  // 围岩等级，默认1
         jlresult: seg.jlresult || '',
       })),
     };
@@ -544,9 +542,6 @@ function GeologyForecastCreatePage() {
           clsj: values.clsj || 0,  // 测量时间
           mqfw: values.mqfw || 0,  // 盲区范围
           cxbzms: values.cxbzms || '',  // 测线布置描述
-          pic1: values.pic1 || '',
-          pic2: values.pic2 || '',
-          pic3: values.pic3 || '',
         };
       case 7: // WZJC - 微震监测预报
         return {
@@ -704,21 +699,31 @@ function GeologyForecastCreatePage() {
               ) : (
                 <Grid.Row gutter={24}>
                   <Grid.Col span={8}>
-                    <Form.Item label="掌子面里程" required>
-                      <Input.Group>
-                        <Form.Item field="dkname" noStyle rules={[{ required: true }]}>
-                          <Input style={{ width: 80 }} />
-                        </Form.Item>
-                        <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
-                        <Form.Item field="dkilo" noStyle rules={[{ required: true }]}>
-                          <InputNumber style={{ width: 120 }} precision={2} />
-                        </Form.Item>
-                      </Input.Group>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="例如: DK" />
                     </Form.Item>
                   </Grid.Col>
                   <Grid.Col span={8}>
-                    <Form.Item label="预报长度" field="ybLength" rules={[{ required: true, message: '请输入预报长度' }]}>
-                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(米)" precision={2} />
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="dkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber style={{ width: 100 }} placeholder="180" precision={0} min={0} />
+                        </Form.Item>
+                        <span>+</span>
+                        <Form.Item field="dkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber style={{ width: 100 }} placeholder="972" precision={0} min={0} max={999} />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item 
+                      label="预报长度" 
+                      field="ybLength" 
+                      rules={[{ required: true, message: '请输入预报长度' }]}
+                      extra="单位:m，保留2位小数，整数位不超过5位"
+                    >
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度" precision={2} step={1} min={0} max={99999.99} />
                     </Form.Item>
                   </Grid.Col>
                 </Grid.Row>
@@ -1671,123 +1676,14 @@ function GeologyForecastCreatePage() {
       </div>
 
       {/* 分段信息新增/编辑弹窗 */}
-      <Modal
-        title={editingSegmentIndex !== null ? '编辑分段信息' : '新增分段信息'}
+      {/* 分段信息弹窗 - 使用通用组件 */}
+      <SegmentModal
         visible={segmentModalVisible}
-        onOk={handleConfirmSegment}
         onCancel={() => setSegmentModalVisible(false)}
-        okText="确认"
-        cancelText="取消"
-        style={{ width: 700 }}
-      >
-        <Form form={segmentForm} layout="vertical">
-          <Grid.Row gutter={16}>
-            <Grid.Col span={12}>
-              <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
-                <Input placeholder="例如: DK" />
-              </Form.Item>
-            </Grid.Col>
-            <Grid.Col span={12}>
-              <Form.Item label="围岩等级" field="grade" rules={[{ required: true, message: '请选择围岩等级' }]}>
-                <Select placeholder="请选择">
-                  <Select.Option value={1}>I级</Select.Option>
-                  <Select.Option value={2}>II级</Select.Option>
-                  <Select.Option value={3}>III级</Select.Option>
-                  <Select.Option value={4}>IV级</Select.Option>
-                  <Select.Option value={5}>V级</Select.Option>
-                  <Select.Option value={6}>VI级</Select.Option>
-                </Select>
-              </Form.Item>
-            </Grid.Col>
-          </Grid.Row>
-          <Grid.Row gutter={16}>
-            <Grid.Col span={12}>
-              <Form.Item label="开始里程" required>
-                <Input.Group>
-                  <Form.Item field="sdkname" noStyle>
-                    <Input style={{ width: 80 }} placeholder="DK" />
-                  </Form.Item>
-                  <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
-                  <Form.Item field="sdkilo" noStyle rules={[{ required: true }]}>
-                    <InputNumber style={{ width: 100 }} precision={2} />
-                  </Form.Item>
-                </Input.Group>
-              </Form.Item>
-            </Grid.Col>
-            <Grid.Col span={12}>
-              <Form.Item label="结束里程" required>
-                <Input.Group>
-                  <Form.Item field="edkname" noStyle>
-                    <Input style={{ width: 80 }} placeholder="DK" />
-                  </Form.Item>
-                  <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
-                  <Form.Item field="edkilo" noStyle rules={[{ required: true }]}>
-                    <InputNumber style={{ width: 100 }} precision={2} />
-                  </Form.Item>
-                </Input.Group>
-              </Form.Item>
-            </Grid.Col>
-          </Grid.Row>
-          <Grid.Row gutter={16}>
-            <Grid.Col span={24}>
-              <Form.Item label="产生时间" field="ybjgTime" rules={[{ required: true, message: '请选择产生时间' }]}>
-                <DatePicker showTime style={{ width: '100%' }} placeholder="请选择日期时间" />
-              </Form.Item>
-            </Grid.Col>
-          </Grid.Row>
-          <Grid.Row gutter={16}>
-            <Grid.Col span={12}>
-              <Form.Item label="风险类别" field="risklevel" rules={[{ required: true, message: '请选择风险类别' }]}>
-                <Select placeholder="请选择风险类别">
-                  <Select.Option value="破碎带">破碎带</Select.Option>
-                  <Select.Option value="岩溶">岩溶</Select.Option>
-                  <Select.Option value="瓦斯">瓦斯</Select.Option>
-                  <Select.Option value="涌水">涌水</Select.Option>
-                  <Select.Option value="突泥">突泥</Select.Option>
-                  <Select.Option value="地应力">地应力</Select.Option>
-                  <Select.Option value="采空区">采空区</Select.Option>
-                  <Select.Option value="岩爆">岩爆</Select.Option>
-                </Select>
-              </Form.Item>
-            </Grid.Col>
-            <Grid.Col span={12}>
-              <Form.Item label="地质级别" field="dzjb">
-                <Space>
-                  <span>已选:</span>
-                  <Button 
-                    size="small" 
-                    style={{ backgroundColor: segmentForm.getFieldValue('dzjb') === 'green' ? '#52c41a' : '#f0f0f0', color: segmentForm.getFieldValue('dzjb') === 'green' ? '#fff' : '#333' }}
-                    onClick={() => segmentForm.setFieldValue('dzjb', 'green')}
-                  >
-                    绿色
-                  </Button>
-                  <Button 
-                    size="small" 
-                    style={{ backgroundColor: segmentForm.getFieldValue('dzjb') === 'yellow' ? '#faad14' : '#f0f0f0', color: segmentForm.getFieldValue('dzjb') === 'yellow' ? '#fff' : '#333' }}
-                    onClick={() => segmentForm.setFieldValue('dzjb', 'yellow')}
-                  >
-                    黄色
-                  </Button>
-                  <Button 
-                    size="small" 
-                    style={{ backgroundColor: segmentForm.getFieldValue('dzjb') === 'red' ? '#ff4d4f' : '#f0f0f0', color: segmentForm.getFieldValue('dzjb') === 'red' ? '#fff' : '#333' }}
-                    onClick={() => segmentForm.setFieldValue('dzjb', 'red')}
-                  >
-                    红色
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Grid.Col>
-          </Grid.Row>
-          <Grid.Row gutter={16}>
-            <Grid.Col span={24}>
-              <Form.Item label="预报结论" field="ybjl" rules={[{ required: true, message: '请输入预报结论' }]}>
-                <TextArea placeholder="请输入预报结论..." rows={4} maxLength={500} showWordLimit />
-              </Form.Item>
-            </Grid.Col>
-          </Grid.Row>
-        </Form>
-      </Modal>
+        onOk={handleConfirmSegment}
+        editingData={editingSegment}
+        defaultDkname={form.getFieldValue('dkname') || 'DK'}
+      />
 
       {/* 电磁波反射 - 测线布置信息新增/编辑弹窗 */}
       <Modal

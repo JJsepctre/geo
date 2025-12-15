@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import {
   Modal,
   Form,
@@ -6,7 +6,6 @@ import {
   InputNumber,
   DatePicker,
   Select,
-  Tag,
   Grid
 } from '@arco-design/web-react'
 
@@ -28,12 +27,12 @@ export const RISK_LEVEL_OPTIONS = [
 
 // 围岩等级选项
 export const WYLEVEL_OPTIONS = [
-  { value: 1, label: 'Ⅰ' },
-  { value: 2, label: 'Ⅱ' },
-  { value: 3, label: 'Ⅲ' },
-  { value: 4, label: 'Ⅳ' },
-  { value: 5, label: 'Ⅴ' },
-  { value: 6, label: 'Ⅵ' },
+  { value: 1, label: 'Ⅰ级' },
+  { value: 2, label: 'Ⅱ级' },
+  { value: 3, label: 'Ⅲ级' },
+  { value: 4, label: 'Ⅳ级' },
+  { value: 5, label: 'Ⅴ级' },
+  { value: 6, label: 'Ⅵ级' },
 ]
 
 // 地质级别颜色选项
@@ -70,14 +69,12 @@ interface SegmentModalProps {
 
 function SegmentModal({ visible, onCancel, onOk, editingData, defaultDkname = 'X2DK' }: SegmentModalProps) {
   const [form] = Form.useForm()
-  const [selectedDzjb, setSelectedDzjb] = useState<string>('')
 
   // 当弹窗打开或编辑数据变化时，重置表单
   useEffect(() => {
     if (visible) {
       if (editingData) {
         form.setFieldsValue(editingData)
-        setSelectedDzjb(editingData.dzjb || '')
       } else {
         form.resetFields()
         form.setFieldsValue({
@@ -85,7 +82,6 @@ function SegmentModal({ visible, onCancel, onOk, editingData, defaultDkname = 'X
           wylevel: 1,
           ybjgTime: new Date().toISOString().replace('T', ' ').substring(0, 19)
         })
-        setSelectedDzjb('')
       }
     }
   }, [visible, editingData, form, defaultDkname])
@@ -94,8 +90,16 @@ function SegmentModal({ visible, onCancel, onOk, editingData, defaultDkname = 'X
     try {
       await form.validate()
       const values = form.getFieldsValue()
-      const dataWithDzjb = { ...values, dzjb: selectedDzjb }
-      onOk(dataWithDzjb)
+      const data = { 
+        ...values, 
+        // 新增时 ybjgPk/ybjgId 应该为 null（后端会自动生成），编辑时保留原有ID
+        // 使用临时ID用于前端列表显示，但发送给后端时会被处理
+        ybjgId: values.ybjgId || null,
+        ybjgPk: values.ybjgPk || null,
+        // 添加一个临时ID用于前端列表的 rowKey
+        _tempId: values.ybjgPk || Date.now(),
+      }
+      onOk(data)
     } catch (e) {
       // 表单验证失败
     }
@@ -177,34 +181,14 @@ function SegmentModal({ visible, onCancel, onOk, editingData, defaultDkname = 'X
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="地质级别">
-              <div>
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ marginRight: 8 }}>已选:</span>
-                  {selectedDzjb && (
-                    <Tag 
-                      color={DZJB_OPTIONS.find(o => o.value === selectedDzjb)?.color || 'green'}
-                      closable
-                      onClose={() => setSelectedDzjb('')}
-                    >
-                      {DZJB_OPTIONS.find(o => o.value === selectedDzjb)?.label}
-                    </Tag>
-                  )}
-                </div>
-                <div>
-                  <span style={{ marginRight: 8 }}>待选:</span>
-                  {DZJB_OPTIONS.filter(o => o.value !== selectedDzjb).map(opt => (
-                    <Tag 
-                      key={opt.value}
-                      color={opt.color} 
-                      style={{ cursor: 'pointer', marginRight: 4 }} 
-                      onClick={() => setSelectedDzjb(opt.value)}
-                    >
-                      {opt.label}
-                    </Tag>
-                  ))}
-                </div>
-              </div>
+            <Form.Item label="地质级别" field="dzjb">
+              <Select placeholder="请选择地质级别" allowClear>
+                {DZJB_OPTIONS.map(opt => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    <span style={{ color: opt.color === 'gold' ? '#faad14' : opt.color }}>{opt.label}</span>
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>

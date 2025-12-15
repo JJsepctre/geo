@@ -53,16 +53,24 @@ const METHOD_MAP: Record<number, string> = {
   14: '加深炮孔',
 }
 
-// 里程格式化函数
-const formatMileage = (val: number | string) => {
-  if (!val) return '-'
+// 里程格式化函数：将 dkilo 格式化为 DKxxx+xxx.x 格式
+// 例如：180971 -> DK180+971, 180971.8 -> DK180+971.8
+const formatMileage = (val: number | string, dkname?: string) => {
+  if (val === undefined || val === null || val === '') return '-'
   const numVal = Number(val)
   if (isNaN(numVal)) return val
-  // 假设里程数据是整数（米），或者浮点数
-  // 格式化为 DKxxx+xxx.xx
-  // 这里假设 val 是总米数，需要根据实际业务调整
-  // 简单实现：直接显示 DK + 数值
-  return `DK${val}`
+  
+  const prefix = dkname || 'DK'
+  const km = Math.floor(numVal / 1000)
+  const m = numVal % 1000
+  
+  // 如果有小数部分，保留小数
+  if (numVal % 1 !== 0) {
+    const mWithDecimal = (numVal % 1000).toFixed(1)
+    return `${prefix}${km}+${mWithDecimal}`
+  }
+  
+  return `${prefix}${km}+${m}`
 }
 
 // 五个方法选项卡类型
@@ -141,7 +149,7 @@ function GeologyForecastPage() {
         title: '掌子面里程',
         dataIndex: 'dkilo',
         width: 150,
-        render: (val: number) => formatMileage(val)
+        render: (val: number, record: any) => formatMileage(val, record.dkname)
       }
     ]
 

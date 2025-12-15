@@ -70,7 +70,14 @@ function SurfaceSupplementEditPage() {
         const detail = await apiAdapter.getSurfaceSupplementInfo(id)
         if (detail) {
           setDetailData(detail)
-          form.setFieldsValue(detail)
+          // 里程拆分：将 dkilo 拆分为 dkiloKm 和 dkiloM
+          let dkiloKm, dkiloM;
+          if (detail.dkilo !== undefined && detail.dkilo !== null) {
+            dkiloKm = Math.floor(detail.dkilo / 1000);
+            dkiloM = detail.dkilo % 1000;
+          }
+          const formData = { ...detail, dkiloKm, dkiloM };
+          form.setFieldsValue(formData)
           console.log('✅ 地表补充详情数据:', detail)
           
           if (detail.ybjgVOList && Array.isArray(detail.ybjgVOList)) {
@@ -105,16 +112,20 @@ function SurfaceSupplementEditPage() {
       
       const isNew = id === 'new'
       
+      // 里程合并：将 dkiloKm 和 dkiloM 合并为 dkilo
+      const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
+      
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
       const submitData = {
         ...detailData,    // 先用原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
-        ybPk: isNew ? null : null,  // 临时设置为null，后端修复后改回id
+        dkilo,            // 使用合并后的里程值
+        dbbcPk: isNew ? null : detailData?.dbbcPk,  // 编辑模式保留原始ID
         siteId: siteId || detailData?.siteId,
         method: 12,       // 地表补充的method为12
         ybjgDTOList: segmentList.map(item => ({
-          ybjgPk: null,   // 临时设置为null
-          ybPk: null,     // 临时设置为null
+          ybjgPk: isNew ? null : (item.ybjgPk || null),  // 编辑模式保留原始ID
+          ybPk: isNew ? null : (item.ybPk || detailData?.dbbcPk || null),  // 编辑模式保留原始ID
           dkname: item.dkname,
           sdkilo: item.sdkilo,
           edkilo: item.edkilo,
@@ -255,16 +266,16 @@ function SurfaceSupplementEditPage() {
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="掌子面里程">
-                      <Input.Group>
-                        <Form.Item field="dkilo" noStyle>
-                          <InputNumber placeholder="0" style={{ width: '40%' }} />
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="dkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber placeholder="180" style={{ width: 100 }} precision={0} min={0} />
                         </Form.Item>
-                        <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
-                        <Form.Item field="beginkilo" noStyle>
-                          <InputNumber placeholder="250" style={{ width: '40%' }} />
+                        <span>+</span>
+                        <Form.Item field="dkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber placeholder="972" style={{ width: 100 }} precision={0} min={0} max={999} />
                         </Form.Item>
-                      </Input.Group>
+                      </Space>
                     </Form.Item>
                   </Col>
                 </Row>

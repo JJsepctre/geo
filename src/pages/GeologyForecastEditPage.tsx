@@ -55,10 +55,28 @@ function GeologyForecastEditPage() {
   const [tspPdList, setTspPdList] = useState<any[]>([])
   const [tspBxList, setTspBxList] = useState<any[]>([])
   const [zkList, setZkList] = useState<any[]>([])
+  const [ldsnCdList, setLdsnCdList] = useState<any[]>([]) // LDSN测点信息列表
+  const [dcbfsCxList, setDcbfsCxList] = useState<any[]>([]) // DCBFS测线布置信息列表
   const [editZkVisible, setEditZkVisible] = useState(false)
   const [currentZk, setCurrentZk] = useState<any>(null)
   const [currentZkIndex, setCurrentZkIndex] = useState<number>(-1)
   const [zkForm] = Form.useForm()
+  // LDSN测点弹窗状态
+  const [ldsnCdModalVisible, setLdsnCdModalVisible] = useState(false)
+  const [currentLdsnCd, setCurrentLdsnCd] = useState<any>(null)
+  const [currentLdsnCdIndex, setCurrentLdsnCdIndex] = useState<number>(-1)
+  const [ldsnCdForm] = Form.useForm()
+  // DCBFS测线弹窗状态
+  const [dcbfsCxModalVisible, setDcbfsCxModalVisible] = useState(false)
+  const [currentDcbfsCx, setCurrentDcbfsCx] = useState<any>(null)
+  const [currentDcbfsCxIndex, setCurrentDcbfsCxIndex] = useState<number>(-1)
+  const [dcbfsCxForm] = Form.useForm()
+  // GFBZLD电极距掌子面距离表状态
+  const [gfbzldDjList, setGfbzldDjList] = useState<any[]>([]) // 电极距掌子面距离列表
+  const [gfbzldDjModalVisible, setGfbzldDjModalVisible] = useState(false)
+  const [currentGfbzldDj, setCurrentGfbzldDj] = useState<any>(null)
+  const [currentGfbzldDjIndex, setCurrentGfbzldDjIndex] = useState<number>(-1)
+  const [gfbzldDjForm] = Form.useForm()
 
   // 判断是否为新增模式
   const isCreateMode = id === 'new';
@@ -106,6 +124,95 @@ function GeologyForecastEditPage() {
             }
           } catch (e) {
             console.error('获取TSP详情失败，使用列表数据降级', e);
+          }
+        }
+
+        // 如果是 HSP (物探法 & method=2)，调用详情接口
+        if (type === 'geophysical' && String(methodParam) === '2') {
+          try {
+            const detail = await apiAdapter.getHspDetail(id);
+            console.log('📥 [编辑页面] HSP详情数据:', detail);
+            if (detail) {
+              console.log('🔑 [调试] HSP详情数据Keys:', Object.keys(detail));
+              console.log('🔑 [调试] HSP ybId:', detail.ybId, 'hspPk:', detail.hspPk, 'hspId:', detail.hspId);
+              data = detail;
+            }
+          } catch (e) {
+            console.error('获取HSP详情失败，使用列表数据降级', e);
+          }
+        }
+
+        // 如果是 LDSN (物探法 & method=3)，调用详情接口
+        if (type === 'geophysical' && String(methodParam) === '3') {
+          try {
+            const detail = await apiAdapter.getLdsnDetail(id);
+            console.log('📥 [编辑页面] LDSN详情数据:', detail);
+            if (detail) {
+              console.log('🔑 [调试] LDSN详情数据Keys:', Object.keys(detail));
+              console.log('🔑 [调试] LDSN ybId:', detail.ybId, 'ldsnPk:', detail.ldsnPk, 'ldsnId:', detail.ldsnId);
+              data = detail;
+            }
+          } catch (e) {
+            console.error('获取LDSN详情失败，使用列表数据降级', e);
+          }
+        }
+
+        // 如果是 DCBFS (物探法 & method=4)，调用详情接口
+        if (type === 'geophysical' && String(methodParam) === '4') {
+          try {
+            const detail = await apiAdapter.getDcbfsDetail(id);
+            console.log('📥 [编辑页面] DCBFS详情数据:', detail);
+            if (detail) {
+              console.log('🔑 [调试] DCBFS详情数据Keys:', Object.keys(detail));
+              console.log('🔑 [调试] DCBFS ybId:', detail.ybId, 'dcbfsPk:', detail.dcbfsPk, 'dcbfsId:', detail.dcbfsId);
+              console.log('🔑 [调试] DCBFS dcbfsResultinfoVOList:', detail.dcbfsResultinfoVOList);
+              console.log('🔑 [调试] DCBFS dcbfsResultinfoDTOList:', detail.dcbfsResultinfoDTOList);
+              data = detail;
+            }
+          } catch (e) {
+            console.error('获取DCBFS详情失败，使用列表数据降级', e);
+          }
+        }
+
+        // 如果是 GFBZLD (物探法 & method=5)，调用详情接口
+        if (type === 'geophysical' && String(methodParam) === '5') {
+          try {
+            const detail = await apiAdapter.getGfbzldDetail(id);
+            console.log('📥 [编辑页面] GFBZLD详情数据:', detail);
+            if (detail) {
+              console.log('🔑 [调试] GFBZLD详情数据Keys:', Object.keys(detail));
+              data = detail;
+            }
+          } catch (e) {
+            console.error('获取GFBZLD详情失败，使用列表数据降级', e);
+          }
+        }
+
+        // 如果是 SBDC (物探法 & method=6)，调用详情接口
+        if (type === 'geophysical' && String(methodParam) === '6') {
+          try {
+            const detail = await apiAdapter.getSbdcDetail(id);
+            console.log('📥 [编辑页面] SBDC详情数据:', detail);
+            if (detail) {
+              console.log('🔑 [调试] SBDC详情数据Keys:', Object.keys(detail));
+              data = detail;
+            }
+          } catch (e) {
+            console.error('获取SBDC详情失败，使用列表数据降级', e);
+          }
+        }
+
+        // 如果是 WZJC (物探法 & method=7 微震监测预报)，调用详情接口
+        if (type === 'geophysical' && String(methodParam) === '7') {
+          try {
+            const detail = await apiAdapter.getWzjcDetail(id);
+            console.log('📥 [编辑页面] WZJC详情数据:', detail);
+            if (detail) {
+              console.log('🔑 [调试] WZJC详情数据Keys:', Object.keys(detail));
+              data = detail;
+            }
+          } catch (e) {
+            console.error('获取WZJC详情失败，使用列表数据降级', e);
           }
         }
 
@@ -193,14 +300,57 @@ function GeologyForecastEditPage() {
             console.log('🔍 [编辑页面] 钻孔列表数据:', data.cqspzZkzzVOList);
           }
 
+          // 初始化LDSN测点列表
+          if (data.ldsnResultinfoVOList) {
+            setLdsnCdList(data.ldsnResultinfoVOList);
+            console.log('🔍 [编辑页面] LDSN测点列表数据:', data.ldsnResultinfoVOList);
+          } else if (data.ldsnResultinfoDTOList) {
+            setLdsnCdList(data.ldsnResultinfoDTOList);
+            console.log('🔍 [编辑页面] LDSN测点列表数据(DTO):', data.ldsnResultinfoDTOList);
+          }
+
+          // 初始化DCBFS测线布置列表
+          console.log('🔍 [编辑页面] 检查DCBFS测线列表 - dcbfsResultinfoVOList:', data.dcbfsResultinfoVOList, 'dcbfsResultinfoDTOList:', data.dcbfsResultinfoDTOList);
+          if (data.dcbfsResultinfoVOList && data.dcbfsResultinfoVOList.length > 0) {
+            console.log('🔍 [编辑页面] 设置DCBFS测线列表(VO):', data.dcbfsResultinfoVOList);
+            setDcbfsCxList(data.dcbfsResultinfoVOList);
+          } else if (data.dcbfsResultinfoDTOList && data.dcbfsResultinfoDTOList.length > 0) {
+            console.log('🔍 [编辑页面] 设置DCBFS测线列表(DTO):', data.dcbfsResultinfoDTOList);
+            setDcbfsCxList(data.dcbfsResultinfoDTOList);
+          } else {
+            console.log('🔍 [编辑页面] DCBFS测线列表为空或不存在');
+          }
+
           // 格式化日期
           const formattedDate = data.monitordate
             ? new Date(data.monitordate).toISOString().replace('T', ' ').split('.')[0]
             : undefined;
 
+          // 物探法里程拆分：将 dkilo 拆分为对应的字段用于表单显示
+          let dkiloKm, dkiloM, hspDkiloKm, hspDkiloM, sdkilo, dkiloMeter;
+          if (type === 'geophysical' && data.dkilo !== undefined && data.dkilo !== null) {
+            if (methodParam === '2') {
+              // HSP 使用单独的字段名 hspDkiloKm/hspDkiloM
+              hspDkiloKm = Math.floor(data.dkilo / 1000);
+              hspDkiloM = data.dkilo % 1000;
+            } else if (methodParam === '3' || methodParam === '4' || methodParam === '5' || methodParam === '6' || methodParam === '7' || methodParam === '0') {
+              // LDSN(3), DCBFS(4), GFBZLD(5), SBDC(6), WZJC(7), 其他(0) - 使用 sdkilo/dkilo
+              sdkilo = Math.floor(data.dkilo / 1000);
+              dkiloMeter = data.dkilo % 1000;
+              console.log('📝 [里程拆分] method=' + methodParam + ', 原始dkilo=' + data.dkilo + ', sdkilo=' + sdkilo + ', dkilo(米)=' + dkiloMeter);
+            } else {
+              // TSP(1) 等其他物探法 - 使用 dkiloKm/dkiloM
+              dkiloKm = Math.floor(data.dkilo / 1000);
+              dkiloM = data.dkilo % 1000;
+            }
+          }
+
           const formData = {
             ...data,
-            monitordate: formattedDate
+            monitordate: formattedDate,
+            ...(methodParam === '2' && { hspDkiloKm, hspDkiloM }),
+            ...((methodParam === '3' || methodParam === '4' || methodParam === '5' || methodParam === '6' || methodParam === '7' || methodParam === '0') && { sdkilo, dkilo: dkiloMeter }),
+            ...(type === 'geophysical' && methodParam === '1' && { dkiloKm, dkiloM })
           };
 
           console.log('📝 [编辑页面] 准备填充到表单的数据:', formData);
@@ -227,6 +377,14 @@ function GeologyForecastEditPage() {
 
   const handleSave = async () => {
     console.log('💾 保存数据 - 原始record:', record);
+    console.log('💾 保存数据 - record中的关键字段:', {
+      ldsnPk: record?.ldsnPk,
+      ldsnId: record?.ldsnId,
+      dcbfsPk: record?.dcbfsPk,
+      dcbfsId: record?.dcbfsId,
+      hspPk: record?.hspPk,
+      hspId: record?.hspId,
+    });
     
     // 获取表单所有字段值
     const formValues = form.getFieldsValue();
@@ -235,6 +393,10 @@ function GeologyForecastEditPage() {
     // 合并 record 和表单值
     const allValues = { ...record, ...formValues };
     console.log('💾 保存数据 - 合并后:', allValues);
+    console.log('💾 保存数据 - 合并后关键字段:', {
+      ldsnPk: allValues?.ldsnPk,
+      ldsnId: allValues?.ldsnId,
+    });
     
     let values = allValues;
       
@@ -247,12 +409,20 @@ function GeologyForecastEditPage() {
       setLoading(true);
 
       // 构建提交数据
+      console.log('💾 [handleSave] 当前 ybjgList 状态:', ybjgList);
+      console.log('💾 [handleSave] ybjgList 长度:', ybjgList?.length);
+      
       const submitData = {
         ...values,
         ybjgDTOList: ybjgList,
         tspPddataDTOList: tspPdList,
         tspBxdataDTOList: tspBxList,
+        ldsnResultinfoDTOList: ldsnCdList, // LDSN测点列表
+        dcbfsResultinfoDTOList: dcbfsCxList, // DCBFS测线布置列表
       };
+      
+      console.log('💾 [handleSave] submitData.ybjgDTOList:', submitData.ybjgDTOList);
+      console.log('💾 [handleSave] submitData.ybjgDTOList 长度:', submitData.ybjgDTOList?.length);
 
       // 确保必填字段存在（如果record中没有，尝试从其他来源获取）
       if (!submitData.siteId) {
@@ -269,6 +439,33 @@ function GeologyForecastEditPage() {
       // 确保method字段存在
       if (!submitData.method && methodParam) {
         submitData.method = parseInt(methodParam);
+      }
+
+      // 物探法里程合并：将 dkiloKm/dkiloM 或 hspDkiloKm/hspDkiloM 或 sdkilo/dkilo 合并为 dkilo
+      if (type === 'geophysical') {
+        if (methodParam === '2') {
+          // HSP - 使用 hspDkiloKm/hspDkiloM
+          const km = submitData.hspDkiloKm || 0;
+          const m = submitData.hspDkiloM || 0;
+          submitData.dkilo = km * 1000 + m;
+          delete submitData.hspDkiloKm;
+          delete submitData.hspDkiloM;
+        } else if (methodParam === '3' || methodParam === '4' || methodParam === '5' || methodParam === '6' || methodParam === '7' || methodParam === '0') {
+          // LDSN(3), DCBFS(4), GFBZLD(5), SBDC(6), WZJC(7), 其他(0) - 使用 sdkilo/dkilo
+          // sdkilo 是公里数，dkilo 是米数，需要合并为总米数
+          const km = submitData.sdkilo || 0;
+          const m = submitData.dkilo || 0;
+          submitData.dkilo = km * 1000 + m;
+          delete submitData.sdkilo;
+          console.log('💾 [里程合并] method=' + methodParam + ', sdkilo=' + km + ', dkilo(米)=' + m + ', 合并后dkilo=' + submitData.dkilo);
+        } else {
+          // TSP(1) 等其他物探法 - 使用 dkiloKm/dkiloM
+          const km = submitData.dkiloKm || 0;
+          const m = submitData.dkiloM || 0;
+          submitData.dkilo = km * 1000 + m;
+          delete submitData.dkiloKm;
+          delete submitData.dkiloM;
+        }
       }
 
       console.log('💾 保存数据 - 合并后:', submitData);
@@ -354,6 +551,8 @@ function GeologyForecastEditPage() {
           actualId = String(submitData.dssmPk);
         } else if (type === 'drilling' && submitData.ztfPk) {
           actualId = String(submitData.ztfPk);
+        } else if (type === 'surface' && submitData.dbbcPk) {
+          actualId = String(submitData.dbbcPk);
         }
 
         console.log('💾 使用的实际ID:', actualId);
@@ -363,10 +562,20 @@ function GeologyForecastEditPage() {
             result = await apiAdapter.updateGeophysical(actualId!, submitData, methodParam);
             break;
           case 'palmSketch':
-            result = await apiAdapter.updatePalmSketch(id!, values);
+            // 掌子面素描需要包含完整数据
+            const palmSketchData = {
+              ...submitData,
+              ybjgDTOList: ybjgList,  // 包含分段列表
+            };
+            result = await apiAdapter.updatePalmSketch(actualId!, palmSketchData);
             break;
           case 'tunnelSketch':
-            result = await apiAdapter.updateTunnelSketch(id!, values);
+            // 洞身素描需要包含完整数据
+            const tunnelSketchData = {
+              ...submitData,
+              ybjgDTOList: ybjgList,  // 包含分段列表
+            };
+            result = await apiAdapter.updateTunnelSketch(actualId!, tunnelSketchData);
             break;
           case 'drilling':
             // 钻探法需要包含钻孔列表数据
@@ -375,6 +584,14 @@ function GeologyForecastEditPage() {
               cqspzZkzzVOList: zkList  // 包含钻孔列表
             };
             result = await apiAdapter.updateDrilling(actualId!, drillingData);
+            break;
+          case 'surface':
+            // 地表补充需要包含分段列表数据
+            const surfaceData = {
+              ...submitData,
+              ybjgDTOList: ybjgList  // 包含分段列表
+            };
+            result = await apiAdapter.updateSurfaceSupplement(actualId!, surfaceData);
             break;
           default:
             Message.error('不支持的类型');
@@ -418,6 +635,8 @@ function GeologyForecastEditPage() {
         ybjgDTOList: partialData.ybjgDTOList !== undefined ? partialData.ybjgDTOList : ybjgList,
         tspPddataDTOList: partialData.tspPddataDTOList !== undefined ? partialData.tspPddataDTOList : tspPdList,
         tspBxdataDTOList: partialData.tspBxdataDTOList !== undefined ? partialData.tspBxdataDTOList : tspBxList,
+        ldsnResultinfoDTOList: partialData.ldsnResultinfoDTOList !== undefined ? partialData.ldsnResultinfoDTOList : ldsnCdList,
+        dcbfsResultinfoDTOList: partialData.dcbfsResultinfoDTOList !== undefined ? partialData.dcbfsResultinfoDTOList : dcbfsCxList,
         ...partialData // 覆盖其他字段
       };
 
@@ -431,6 +650,12 @@ function GeologyForecastEditPage() {
       if (partialData.ybjgDTOList) {
         setYbjgList(partialData.ybjgDTOList);
       }
+      if (partialData.ldsnResultinfoDTOList) {
+        setLdsnCdList(partialData.ldsnResultinfoDTOList);
+      }
+      if (partialData.dcbfsResultinfoDTOList) {
+        setDcbfsCxList(partialData.dcbfsResultinfoDTOList);
+      }
 
       // 确定实际的记录ID（不同类型使用不同的主键）
       let actualId = id;
@@ -442,6 +667,32 @@ function GeologyForecastEditPage() {
         actualId = String(submitData.dssmPk);
       } else if (type === 'drilling' && submitData.ztfPk) {
         actualId = String(submitData.ztfPk);
+      }
+
+      // 物探法里程合并：将 sdkilo/dkilo 合并为 dkilo
+      if (type === 'geophysical') {
+        if (methodParam === '2') {
+          // HSP - 使用 hspDkiloKm/hspDkiloM
+          const km = submitData.hspDkiloKm || 0;
+          const m = submitData.hspDkiloM || 0;
+          submitData.dkilo = km * 1000 + m;
+          delete submitData.hspDkiloKm;
+          delete submitData.hspDkiloM;
+        } else if (methodParam === '3' || methodParam === '4' || methodParam === '5' || methodParam === '6' || methodParam === '7' || methodParam === '0') {
+          // LDSN(3), DCBFS(4), GFBZLD(5), SBDC(6), WZJC(7), 其他(0) - 使用 sdkilo/dkilo
+          const km = submitData.sdkilo || 0;
+          const m = submitData.dkilo || 0;
+          submitData.dkilo = km * 1000 + m;
+          delete submitData.sdkilo;
+          console.log('💾 [局部保存-里程合并] method=' + methodParam + ', sdkilo=' + km + ', dkilo(米)=' + m + ', 合并后dkilo=' + submitData.dkilo);
+        } else {
+          // TSP(1) 等其他物探法 - 使用 dkiloKm/dkiloM
+          const km = submitData.dkiloKm || 0;
+          const m = submitData.dkiloM || 0;
+          submitData.dkilo = km * 1000 + m;
+          delete submitData.dkiloKm;
+          delete submitData.dkiloM;
+        }
       }
 
       console.log('💾 [局部保存] type:', type);
@@ -969,6 +1220,2013 @@ function GeologyForecastEditPage() {
     if (type === 'geophysical') {
       // 陆地声呐有特殊的基本信息布局
       const isLDSN = methodParam === '3';
+      // HSP 水平声波剖面有专门的4个选项卡
+      const isHSP = methodParam === '2';
+
+      // HSP 专用表单 - 4个选项卡
+      if (isHSP) {
+        return (
+          <Tabs type="line">
+            <TabPane key="basic" title="基本信息及其他信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>基本信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报方法" field="method" disabled>
+                      <Select placeholder="请选择">
+                        {Object.entries(METHOD_MAP).map(([k, v]) => <Select.Option key={k} value={Number(k)}>{v}</Select.Option>)}
+                      </Select>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
+                      <DatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="工点编号" field="siteId" disabled>
+                      <Input placeholder="工点编号" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="例如: DK" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="hspDkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber 
+                            style={{ width: '100px' }} 
+                            placeholder="0" 
+                            min={0}
+                            precision={0}
+                          />
+                        </Form.Item>
+                        <span style={{ margin: '0 8px' }}>+</span>
+                        <Form.Item field="hspDkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber 
+                            style={{ width: '100px' }} 
+                            placeholder="0" 
+                            min={0}
+                            max={999}
+                            precision={0}
+                          />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item 
+                      label="预报长度" 
+                      field="ybLength"
+                      rules={[{ required: true, message: '请输入预报长度' }]}
+                      extra="单位:m，保留2位小数，整数位不得超过5位"
+                    >
+                      <InputNumber 
+                        style={{ width: '100%' }} 
+                        placeholder="预报长度" 
+                        precision={2}
+                        step={1}
+                        min={0}
+                        max={99999.99}
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人员" field="testname">
+                      <Input placeholder="检测人员姓名" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人员编号" field="testno">
+                      <Input placeholder="检测人员编号" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人员电话" field="testtel">
+                      <Input placeholder="检测人员电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监测人员" field="monitorname">
+                      <Input placeholder="监测人员姓名" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监测人员编号" field="monitorno">
+                      <Input placeholder="监测人员编号" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监测人员电话" field="monitortel">
+                      <Input placeholder="监测人员电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理人员" field="supervisorname">
+                      <Input placeholder="监理人员姓名" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理人员编号" field="supervisorno">
+                      <Input placeholder="监理人员编号" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理人员电话" field="supervisortel">
+                      <Input placeholder="监理人员电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>预报结论</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={24}>
+                    <Form.Item label="预报结论" field="conclusionyb">
+                      <TextArea rows={4} placeholder="请输入预报结论" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={24}>
+                    <Form.Item label="处理建议" field="suggestion">
+                      <TextArea rows={4} placeholder="请输入处理建议" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={24}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea rows={3} placeholder="请输入备注信息" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="segments" title="分段信息及下次超前地质预报">
+              <TspSegmentsTab
+                form={form}
+                ybjgList={ybjgList}
+                onListChange={setYbjgList}
+                onRemoteSave={handlePartialSave}
+              />
+            </TabPane>
+
+            <TabPane key="system_device" title="观测系统信息及设备信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>水平波剖面观测系统信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测区数量" field="cqnum" extra="整数，不可超过两位">
+                      <InputNumber style={{ width: '100%' }} placeholder="请输入测区数量" min={0} max={99} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测区测点数量" field="cdnum" extra="单位：m，保留1位小数，整数位不超过2位">
+                      <InputNumber style={{ width: '100%' }} placeholder="请输入测区测点数量" min={0} max={99.9} precision={1} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="接收方式" field="jsfs">
+                      <Select placeholder="请选择接收方式">
+                        <Select.Option value="单点接收">单点接收</Select.Option>
+                        <Select.Option value="多点接收">多点接收</Select.Option>
+                        <Select.Option value="阵列接收">阵列接收</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>设备信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="设备名称" field="sbName">
+                      <Input placeholder="请输入设备名称" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="attachments" title="附件及成果图">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件及成果图上传</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="图片1" field="pic1">
+                      <Upload
+                        drag
+                        action="/api/v1/hsp/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'pic1' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                        onChange={(fileList, file) => {
+                          if (file.status === 'done') {
+                            Message.success(`${file.name} 上传成功`);
+                            // 更新表单字段
+                            const resp = file.response as any;
+                            if (resp?.data) {
+                              form.setFieldValue('pic1', resp.data);
+                            }
+                          } else if (file.status === 'error') {
+                            Message.error(`${file.name} 上传失败`);
+                          }
+                        }}
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="图片2" field="pic2">
+                      <Upload
+                        drag
+                        action="/api/v1/hsp/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'pic2' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                        onChange={(fileList, file) => {
+                          if (file.status === 'done') {
+                            Message.success(`${file.name} 上传成功`);
+                            // 更新表单字段
+                            const resp = file.response as any;
+                            if (resp?.data) {
+                              form.setFieldValue('pic2', resp.data);
+                            }
+                          } else if (file.status === 'error') {
+                            Message.error(`${file.name} 上传失败`);
+                          }
+                        }}
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+          </Tabs>
+        );
+      }
+
+      // LDSN 专用表单 - 4个选项卡
+      if (isLDSN) {
+        return (
+          <Tabs type="line">
+            <TabPane key="basic" title="基本信息及其他信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>基本信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="例如: DK" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入起始里程' }]}>
+                          <InputNumber 
+                            style={{ width: '150px' }} 
+                            placeholder="0" 
+                            min={0}
+                            precision={2}
+                          />
+                        </Form.Item>
+                        <span style={{ margin: '0 8px' }}>+</span>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber 
+                            style={{ width: '150px' }} 
+                            placeholder="0" 
+                            min={0}
+                            precision={2}
+                          />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Form.Item 
+                      label="预报长度" 
+                      field="ybLength"
+                      rules={[{ required: true, message: '请输入预报长度' }]}
+                    >
+                      <InputNumber 
+                        style={{ width: '100%' }} 
+                        placeholder="预报长度(m)" 
+                        precision={2}
+                        min={0}
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
+                      <DatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人" field="testname" rules={[{ required: true, message: '请输入检测人' }]}>
+                      <Input placeholder="检测人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人身份证" field="testno" rules={[{ required: true, message: '请输入检测人身份证' }]}>
+                      <Input placeholder="检测人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人电话" field="testtel" rules={[{ required: true, message: '请输入检测人电话' }]}>
+                      <Input placeholder="检测人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人" field="monitorname" rules={[{ required: true, message: '请输入复核人' }]}>
+                      <Input placeholder="复核人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人身份证" field="monitorno" rules={[{ required: true, message: '请输入复核人身份证' }]}>
+                      <Input placeholder="复核人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人电话" field="monitortel" rules={[{ required: true, message: '请输入复核人电话' }]}>
+                      <Input placeholder="复核人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理工程师" field="supervisorname" rules={[{ required: true, message: '请输入监理工程师' }]}>
+                      <Input placeholder="监理工程师" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理身份证" field="supervisorno" rules={[{ required: true, message: '请输入监理身份证' }]}>
+                      <Input placeholder="监理身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理电话" field="supervisortel" rules={[{ required: true, message: '请输入监理电话' }]}>
+                      <Input placeholder="监理电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>其他信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="预报分段结论" field="conclusionyb">
+                      <TextArea rows={4} placeholder="请输入预报分段结论" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="后续建议" field="suggestion">
+                      <TextArea rows={4} placeholder="请输入后续建议" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="实际采取措施" field="solution">
+                      <TextArea rows={4} placeholder="请输入实际采取措施" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea rows={4} placeholder="请输入备注" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="segments" title="分段信息及下次超前地质预报">
+              <TspSegmentsTab
+                form={form}
+                ybjgList={ybjgList}
+                onListChange={setYbjgList}
+                onRemoteSave={handlePartialSave}
+              />
+            </TabPane>
+
+            <TabPane key="system_device" title="观测系统信息及设备信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>观测系统信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测线条数" field="cxnum" rules={[{ required: true, message: '请输入测线条数' }]} extra="整数，不可超过两位">
+                      <InputNumber style={{ width: '100%' }} placeholder="请输入测线条数" min={0} max={99} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>设备信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="设备名称" field="sbName" rules={[{ required: true, message: '请输入设备名称' }]}>
+                      <Input placeholder="请输入设备名称" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>测点信息表</div>
+                <div style={{ marginBottom: '16px' }}>
+                  <Button 
+                    type="primary" 
+                    size="small"
+                    onClick={() => {
+                      setCurrentLdsnCd({ cdxh: ldsnCdList.length + 1, jgdjl: undefined, jzxjl: undefined });
+                      setCurrentLdsnCdIndex(-1);
+                      ldsnCdForm.resetFields();
+                      ldsnCdForm.setFieldsValue({ cdxh: ldsnCdList.length + 1 });
+                      setLdsnCdModalVisible(true);
+                    }}
+                  >
+                    + 新增
+                  </Button>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F7F8FA' }}>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb', width: '80px' }}>测点序号</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>距拱顶距离</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>距中线距离</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb', width: '100px' }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ldsnCdList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '40px', textAlign: 'center', border: '1px solid #e5e6eb' }}>
+                          <Empty description="暂无数据" />
+                        </td>
+                      </tr>
+                    ) : (
+                      ldsnCdList.map((item, index) => (
+                        <tr key={index}>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.cdxh}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.jgdjl}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.jzxjl}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>
+                            <Space>
+                              <Button 
+                                type="text" 
+                                size="small"
+                                onClick={() => {
+                                  setCurrentLdsnCd(item);
+                                  setCurrentLdsnCdIndex(index);
+                                  ldsnCdForm.setFieldsValue(item);
+                                  setLdsnCdModalVisible(true);
+                                }}
+                              >
+                                编辑
+                              </Button>
+                              <Button 
+                                type="text" 
+                                status="danger" 
+                                size="small"
+                                onClick={() => {
+                                  const newList = ldsnCdList.filter((_, i) => i !== index);
+                                  setLdsnCdList(newList);
+                                }}
+                              >
+                                删除
+                              </Button>
+                            </Space>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+
+                {/* LDSN测点信息弹窗 */}
+                <Modal
+                  title={currentLdsnCdIndex === -1 ? '新增测点' : '编辑测点'}
+                  visible={ldsnCdModalVisible}
+                  onOk={() => {
+                    ldsnCdForm.validate().then((values) => {
+                      if (currentLdsnCdIndex === -1) {
+                        // 新增
+                        setLdsnCdList([...ldsnCdList, values]);
+                      } else {
+                        // 编辑
+                        const newList = [...ldsnCdList];
+                        newList[currentLdsnCdIndex] = values;
+                        setLdsnCdList(newList);
+                      }
+                      setLdsnCdModalVisible(false);
+                      ldsnCdForm.resetFields();
+                    });
+                  }}
+                  onCancel={() => {
+                    setLdsnCdModalVisible(false);
+                    ldsnCdForm.resetFields();
+                  }}
+                  okText="确认"
+                  cancelText="取消"
+                >
+                  <Form form={ldsnCdForm} layout="inline">
+                    <Form.Item 
+                      label="测点序号" 
+                      field="cdxh" 
+                      rules={[{ required: true, message: '请输入测点序号' }]}
+                    >
+                      <InputNumber placeholder="" min={1} precision={0} style={{ width: '120px' }} />
+                    </Form.Item>
+                    <Form.Item 
+                      label="距拱顶距离" 
+                      field="jgdjl" 
+                      rules={[{ required: true, message: '请输入距拱顶距离' }]}
+                    >
+                      <InputNumber placeholder="" min={0} max={99.9} precision={1} style={{ width: '120px' }} />
+                    </Form.Item>
+                    <Form.Item 
+                      label="距左线距离" 
+                      field="jzxjl" 
+                      rules={[{ required: true, message: '请输入距左线距离' }]}
+                    >
+                      <InputNumber placeholder="" min={0} max={99.9} precision={1} style={{ width: '120px' }} />
+                    </Form.Item>
+                  </Form>
+                </Modal>
+              </div>
+            </TabPane>
+
+            <TabPane key="attachments" title="附件及成果图">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="原始文件" field="originalfile">
+                      <Upload
+                        drag
+                        action="/api/v1/ldsn/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'originalfile' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="附件（其他报告）" field="addition">
+                      <Upload
+                        drag
+                        action="/api/v1/ldsn/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'addition' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="作业现场图像" field="images">
+                      <Upload
+                        drag
+                        action="/api/v1/ldsn/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'images' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="观测系统布置图" field="gcxtpic">
+                      <Upload
+                        drag
+                        action="/api/v1/ldsn/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'gcxtpic' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="剖面图灰阶" field="pic1">
+                      <Upload
+                        drag
+                        action="/api/v1/ldsn/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'pic1' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测线布置图" field="pic2">
+                      <Upload
+                        drag
+                        action="/api/v1/ldsn/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'pic2' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+          </Tabs>
+        );
+      }
+
+      // DCBFS 专用表单 - 4个选项卡 (电磁波反射)
+      const isDCBFS = methodParam === '4';
+      if (isDCBFS) {
+        return (
+          <Tabs type="line">
+            <TabPane key="basic" title="基本信息及其他信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>基本信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="例如: DK" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入起始里程' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" min={0} precision={2} />
+                        </Form.Item>
+                        <span style={{ margin: '0 8px' }}>+</span>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" min={0} precision={2} />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Form.Item label="预报长度" field="ybLength" rules={[{ required: true, message: '请输入预报长度' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" precision={2} min={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
+                      <DatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人" field="testname" rules={[{ required: true, message: '请输入检测人' }]}>
+                      <Input placeholder="检测人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人身份证" field="testno" rules={[{ required: true, message: '请输入检测人身份证' }]}>
+                      <Input placeholder="检测人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人电话" field="testtel" rules={[{ required: true, message: '请输入检测人电话' }]}>
+                      <Input placeholder="检测人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人" field="monitorname" rules={[{ required: true, message: '请输入复核人' }]}>
+                      <Input placeholder="复核人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人身份证" field="monitorno" rules={[{ required: true, message: '请输入复核人身份证' }]}>
+                      <Input placeholder="复核人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人电话" field="monitortel" rules={[{ required: true, message: '请输入复核人电话' }]}>
+                      <Input placeholder="复核人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理工程师" field="supervisorname" rules={[{ required: true, message: '请输入监理工程师' }]}>
+                      <Input placeholder="监理工程师" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理身份证" field="supervisorno" rules={[{ required: true, message: '请输入监理身份证' }]}>
+                      <Input placeholder="监理身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理电话" field="supervisortel" rules={[{ required: true, message: '请输入监理电话' }]}>
+                      <Input placeholder="监理电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>其他信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="预报分段结论" field="conclusionyb">
+                      <TextArea rows={4} placeholder="请输入预报分段结论" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="后续建议" field="suggestion">
+                      <TextArea rows={4} placeholder="请输入后续建议" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="实际采取措施" field="solution">
+                      <TextArea rows={4} placeholder="请输入实际采取措施" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea rows={4} placeholder="请输入备注" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="segments" title="分段信息及下次超前地质预报">
+              <TspSegmentsTab
+                form={form}
+                ybjgList={ybjgList}
+                onListChange={setYbjgList}
+                onRemoteSave={handlePartialSave}
+              />
+            </TabPane>
+
+            <TabPane key="system_device" title="观测系统信息及设备信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>电磁波反射观测系统信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测线数量" field="cxnum" rules={[{ required: true, message: '请输入测线数量' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="请输入测线数量" min={0} max={99} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>设备信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="设备名称" field="sbName" rules={[{ required: true, message: '请输入设备名称' }]}>
+                      <Input placeholder="请输入设备名称，如: SIR-20" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="天线工作频率" field="gzpl" rules={[{ required: true, message: '请输入天线工作频率' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="单位: MHz" min={0} max={999} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>测线布置信息表 (当前: {dcbfsCxList.length} 条)</div>
+                <div style={{ marginBottom: '16px' }}>
+                  <Button 
+                    type="primary" 
+                    size="small"
+                    onClick={() => {
+                      setCurrentDcbfsCxIndex(-1);
+                      setCurrentDcbfsCx(null);
+                      dcbfsCxForm.resetFields();
+                      dcbfsCxForm.setFieldsValue({ cxxh: dcbfsCxList.length + 1 });
+                      setDcbfsCxModalVisible(true);
+                    }}
+                  >
+                    + 新增
+                  </Button>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F7F8FA' }}>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>测线序号</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>起点X像素</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>起点Y像素</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>终点X像素</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>终点Y像素</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb', width: '100px' }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dcbfsCxList.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '40px', textAlign: 'center', border: '1px solid #e5e6eb' }}>
+                          <Empty description="暂无数据" />
+                        </td>
+                      </tr>
+                    ) : (
+                      dcbfsCxList.map((item, index) => (
+                        <tr key={index}>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.cxxh}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.qdzbx}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.qdzby}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.zdzbx}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.zdzby}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>
+                            <Space>
+                              <Button 
+                                type="text" 
+                                size="small"
+                                onClick={() => {
+                                  setCurrentDcbfsCx(item);
+                                  setCurrentDcbfsCxIndex(index);
+                                  dcbfsCxForm.setFieldsValue(item);
+                                  setDcbfsCxModalVisible(true);
+                                }}
+                              >
+                                编辑
+                              </Button>
+                              <Button 
+                                type="text" 
+                                status="danger" 
+                                size="small"
+                                onClick={async () => {
+                                  const newList = dcbfsCxList.filter((_, i) => i !== index);
+                                  setDcbfsCxList(newList);
+                                  // 同步到后端
+                                  if (handlePartialSave) {
+                                    await handlePartialSave({ dcbfsResultinfoDTOList: newList });
+                                  }
+                                }}
+                              >
+                                删除
+                              </Button>
+                            </Space>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+
+                {/* DCBFS测线布置信息弹窗 */}
+                <Modal
+                  title={currentDcbfsCxIndex === -1 ? '新增测线' : '编辑测线'}
+                  visible={dcbfsCxModalVisible}
+                  onOk={async () => {
+                    try {
+                      const values = await dcbfsCxForm.validate();
+                      let newList: any[];
+                      if (currentDcbfsCxIndex === -1) {
+                        // 新增
+                        newList = [...dcbfsCxList, values];
+                      } else {
+                        // 编辑
+                        newList = [...dcbfsCxList];
+                        newList[currentDcbfsCxIndex] = { ...newList[currentDcbfsCxIndex], ...values };
+                      }
+                      setDcbfsCxList(newList);
+                      setDcbfsCxModalVisible(false);
+                      dcbfsCxForm.resetFields();
+                      // 同步到后端
+                      if (handlePartialSave) {
+                        await handlePartialSave({ dcbfsResultinfoDTOList: newList });
+                      }
+                    } catch (e) {
+                      // 表单验证失败
+                    }
+                  }}
+                  onCancel={() => {
+                    setDcbfsCxModalVisible(false);
+                    dcbfsCxForm.resetFields();
+                  }}
+                  okText="确认"
+                  cancelText="取消"
+                >
+                  <Form form={dcbfsCxForm} layout="vertical">
+                    <Form.Item 
+                      label="测线序号" 
+                      field="cxxh" 
+                      rules={[{ required: true, message: '请输入测线序号' }]}
+                    >
+                      <InputNumber placeholder="序号由1开始递增" min={1} precision={0} style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Grid.Row gutter={16}>
+                      <Grid.Col span={12}>
+                        <Form.Item 
+                          label="起点X像素" 
+                          field="qdzbx" 
+                          rules={[{ required: true, message: '请输入起点X像素' }]}
+                        >
+                          <InputNumber placeholder="" precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Grid.Col>
+                      <Grid.Col span={12}>
+                        <Form.Item 
+                          label="起点Y像素" 
+                          field="qdzby" 
+                          rules={[{ required: true, message: '请输入起点Y像素' }]}
+                        >
+                          <InputNumber placeholder="" precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Grid.Col>
+                    </Grid.Row>
+                    <Grid.Row gutter={16}>
+                      <Grid.Col span={12}>
+                        <Form.Item 
+                          label="终点X像素" 
+                          field="zdzbx" 
+                          rules={[{ required: true, message: '请输入终点X像素' }]}
+                        >
+                          <InputNumber placeholder="" precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Grid.Col>
+                      <Grid.Col span={12}>
+                        <Form.Item 
+                          label="终点Y像素" 
+                          field="zdzby" 
+                          rules={[{ required: true, message: '请输入终点Y像素' }]}
+                        >
+                          <InputNumber placeholder="" precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Grid.Col>
+                    </Grid.Row>
+                  </Form>
+                </Modal>
+              </div>
+            </TabPane>
+
+            <TabPane key="attachments" title="附件及成果图">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="原始文件" field="originalfile">
+                      <Upload
+                        drag
+                        action="/api/v1/dcbfs/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'originalfile' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="附件（其他报告）" field="addition">
+                      <Upload
+                        drag
+                        action="/api/v1/dcbfs/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'addition' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="作业现场图像" field="images">
+                      <Upload
+                        drag
+                        action="/api/v1/dcbfs/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'images' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="观测系统布置图" field="gcxtpic">
+                      <Upload
+                        drag
+                        action="/api/v1/dcbfs/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'gcxtpic' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测线布置示意图" field="pic">
+                      <Upload
+                        drag
+                        action="/api/v1/dcbfs/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'pic' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+          </Tabs>
+        );
+      }
+
+      // GFBZLD 专用表单 - 4个选项卡 (高分辨直流电)
+      const isGFBZLD = methodParam === '5';
+      if (isGFBZLD) {
+        return (
+          <Tabs type="line">
+            <TabPane key="basic" title="基本信息及其他信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>基本信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报方法" field="method">
+                      <Select disabled placeholder="高分辨直流电">
+                        <Select.Option value={5}>高分辨直流电</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
+                      <DatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="例如: DK" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入起始里程' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" min={0} precision={2} />
+                        </Form.Item>
+                        <span style={{ margin: '0 8px' }}>+</span>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" min={0} precision={2} />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Form.Item label="预报长度" field="ybLength" rules={[{ required: true, message: '请输入预报长度' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" precision={2} min={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人" field="testname" rules={[{ required: true, message: '请输入检测人' }]}>
+                      <Input placeholder="检测人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人身份证" field="testno" rules={[{ required: true, message: '请输入检测人身份证' }]}>
+                      <Input placeholder="检测人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人电话" field="testtel" rules={[{ required: true, message: '请输入检测人电话' }]}>
+                      <Input placeholder="检测人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人" field="monitorname" rules={[{ required: true, message: '请输入复核人' }]}>
+                      <Input placeholder="复核人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人身份证" field="monitorno" rules={[{ required: true, message: '请输入复核人身份证' }]}>
+                      <Input placeholder="复核人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人电话" field="monitortel" rules={[{ required: true, message: '请输入复核人电话' }]}>
+                      <Input placeholder="复核人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理工程师" field="supervisorname" rules={[{ required: true, message: '请输入监理工程师' }]}>
+                      <Input placeholder="监理工程师" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理身份证" field="supervisorno" rules={[{ required: true, message: '请输入监理身份证' }]}>
+                      <Input placeholder="监理身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理电话" field="supervisortel" rules={[{ required: true, message: '请输入监理电话' }]}>
+                      <Input placeholder="监理电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>其他信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="预报分段结论" field="conclusionyb">
+                      <TextArea rows={4} placeholder="请输入预报分段结论" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="后续建议" field="suggestion">
+                      <TextArea rows={4} placeholder="请输入后续建议" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="实际采取措施" field="solution">
+                      <TextArea rows={4} placeholder="请输入实际采取措施" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea rows={4} placeholder="请输入备注" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="segments" title="分段信息及下次超前地质预报">
+              <TspSegmentsTab
+                form={form}
+                ybjgList={ybjgList}
+                onListChange={setYbjgList}
+                onRemoteSave={handlePartialSave}
+              />
+            </TabPane>
+
+            <TabPane key="system_device" title="观测系统信息及设备信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>高分辨直流电观测系统信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="供电电极数量" field="gddjsl" rules={[{ required: true, message: '请输入供电电极数量' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="请输入供电电极数量" min={0} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测量电极测点数量" field="cldjcdsl" rules={[{ required: true, message: '请输入测量电极测点数量' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="请输入测量电极测点数量" min={0} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>设备信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="设备名称" field="sbName" rules={[{ required: true, message: '请输入设备名称' }]}>
+                      <Input placeholder="请输入设备名称" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="供电电压" field="gddy" rules={[{ required: true, message: '请输入供电电压' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="单位: V" min={0} precision={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="供电电流" field="gddl" rules={[{ required: true, message: '请输入供电电流' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="单位: A" min={0} precision={2} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', marginTop: '20px', fontWeight: 'bold' }}>电极距掌子面距离表</div>
+                <div style={{ marginBottom: '16px' }}>
+                  <Button 
+                    type="primary" 
+                    size="small"
+                    onClick={() => {
+                      setCurrentGfbzldDjIndex(-1);
+                      setCurrentGfbzldDj(null);
+                      gfbzldDjForm.resetFields();
+                      gfbzldDjForm.setFieldsValue({ djxh: gfbzldDjList.length + 1 });
+                      setGfbzldDjModalVisible(true);
+                    }}
+                  >
+                    + 新增
+                  </Button>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F7F8FA' }}>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>电极序号</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>类型</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb' }}>距掌子面距离</th>
+                      <th style={{ padding: '10px', border: '1px solid #e5e6eb', width: '100px' }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gfbzldDjList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '40px', textAlign: 'center', border: '1px solid #e5e6eb' }}>
+                          <Empty description="暂无数据" />
+                        </td>
+                      </tr>
+                    ) : (
+                      gfbzldDjList.map((item, index) => (
+                        <tr key={index}>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.djxh}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.djlx === 1 ? '供电电极' : '测量电极'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>{item.jzzmjl}</td>
+                          <td style={{ padding: '10px', border: '1px solid #e5e6eb', textAlign: 'center' }}>
+                            <Space>
+                              <Button 
+                                type="text" 
+                                size="small"
+                                onClick={() => {
+                                  setCurrentGfbzldDj(item);
+                                  setCurrentGfbzldDjIndex(index);
+                                  gfbzldDjForm.setFieldsValue(item);
+                                  setGfbzldDjModalVisible(true);
+                                }}
+                              >
+                                编辑
+                              </Button>
+                              <Button 
+                                type="text" 
+                                status="danger" 
+                                size="small"
+                                onClick={async () => {
+                                  const newList = gfbzldDjList.filter((_, i) => i !== index);
+                                  setGfbzldDjList(newList);
+                                  if (handlePartialSave) {
+                                    await handlePartialSave({ gfbzldResultinfoDTOList: newList });
+                                  }
+                                }}
+                              >
+                                删除
+                              </Button>
+                            </Space>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+
+                {/* GFBZLD电极距掌子面距离弹窗 */}
+                <Modal
+                  title={currentGfbzldDjIndex === -1 ? '新增电极' : '编辑电极'}
+                  visible={gfbzldDjModalVisible}
+                  onOk={async () => {
+                    try {
+                      const values = await gfbzldDjForm.validate();
+                      let newList: any[];
+                      if (currentGfbzldDjIndex === -1) {
+                        newList = [...gfbzldDjList, values];
+                      } else {
+                        newList = [...gfbzldDjList];
+                        newList[currentGfbzldDjIndex] = { ...newList[currentGfbzldDjIndex], ...values };
+                      }
+                      setGfbzldDjList(newList);
+                      setGfbzldDjModalVisible(false);
+                      gfbzldDjForm.resetFields();
+                      if (handlePartialSave) {
+                        await handlePartialSave({ gfbzldResultinfoDTOList: newList });
+                      }
+                    } catch (e) {
+                      // 表单验证失败
+                    }
+                  }}
+                  onCancel={() => {
+                    setGfbzldDjModalVisible(false);
+                    gfbzldDjForm.resetFields();
+                  }}
+                  okText="确认"
+                  cancelText="取消"
+                >
+                  <Form form={gfbzldDjForm} layout="vertical">
+                    <Grid.Row gutter={16}>
+                      <Grid.Col span={12}>
+                        <Form.Item 
+                          label="电极序号" 
+                          field="djxh" 
+                          rules={[{ required: true, message: '请输入电极序号' }]}
+                        >
+                          <InputNumber placeholder="序号" precision={0} style={{ width: '100%' }} min={1} />
+                        </Form.Item>
+                      </Grid.Col>
+                      <Grid.Col span={12}>
+                        <Form.Item 
+                          label="类型" 
+                          field="djlx" 
+                          rules={[{ required: true, message: '请选择类型' }]}
+                        >
+                          <Select placeholder="请选择类型">
+                            <Select.Option value={1}>供电电极</Select.Option>
+                            <Select.Option value={2}>测量电极</Select.Option>
+                          </Select>
+                        </Form.Item>
+                      </Grid.Col>
+                    </Grid.Row>
+                    <Grid.Row gutter={16}>
+                      <Grid.Col span={24}>
+                        <Form.Item 
+                          label="距掌子面距离" 
+                          field="jzzmjl" 
+                          rules={[{ required: true, message: '请输入距掌子面距离' }]}
+                        >
+                          <InputNumber placeholder="单位: m" precision={2} style={{ width: '100%' }} min={0} />
+                        </Form.Item>
+                      </Grid.Col>
+                    </Grid.Row>
+                  </Form>
+                </Modal>
+              </div>
+            </TabPane>
+
+            <TabPane key="attachments" title="附件及成果图">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件及成果图信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="原始文件" field="originalfile">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'originalfile' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="附件（其他报告）" field="addition">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'addition' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="作业现场照片" field="images">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'images' }}
+                        accept="image/*"
+                        limit={5}
+                        listType="picture-card"
+                        tip="支持多张图片"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="观测系统布置图" field="gcxtpic">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'gcxtpic' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="电势等值线图" field="dsdzxt">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'dsdzxt' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="成果图" field="cgt">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'cgt' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="平剖图" field="ppt">
+                      <Upload
+                        drag
+                        action="/api/v1/gfbzld/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'ppt' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+          </Tabs>
+        );
+      }
+
+      // SBDC 专用表单 - 4个选项卡 (瞬变电磁)
+      const isSBDC = methodParam === '6';
+      if (isSBDC) {
+        return (
+          <Tabs type="line">
+            <TabPane key="basic" title="基本信息及其他信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>基本信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报方法" field="method">
+                      <Select disabled placeholder="瞬变电磁">
+                        <Select.Option value={6}>瞬变电磁</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
+                      <DatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="瞬变电磁" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入起始里程' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" precision={2} />
+                        </Form.Item>
+                        <span>+</span>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" precision={2} />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Form.Item label="预报长度" field="ybLength" rules={[{ required: true, message: '请输入预报长度' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" precision={2} min={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人" field="testname">
+                      <Input placeholder="检测人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人身份证" field="testno">
+                      <Input placeholder="检测人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人电话" field="testtel">
+                      <Input placeholder="检测人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人" field="monitorname">
+                      <Input placeholder="复核人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人身份证" field="monitorno">
+                      <Input placeholder="复核人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人电话" field="monitortel">
+                      <Input placeholder="复核人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理工程师" field="supervisorname">
+                      <Input placeholder="监理工程师" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理身份证" field="supervisorno">
+                      <Input placeholder="监理身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理电话" field="supervisortel">
+                      <Input placeholder="监理电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>其他信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="预报分段结论" field="conclusionyb">
+                      <TextArea rows={4} placeholder="请输入预报分段结论" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="后续建议" field="suggestion">
+                      <TextArea rows={4} placeholder="请输入后续建议" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="实际采取措施" field="solution">
+                      <TextArea rows={4} placeholder="请输入实际采取措施" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea rows={4} placeholder="请输入备注" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="segments" title="分段信息及下次超前地质预报">
+              <TspSegmentsTab
+                form={form}
+                ybjgList={ybjgList}
+                onListChange={setYbjgList}
+                onRemoteSave={handlePartialSave}
+              />
+            </TabPane>
+
+            <TabPane key="system_device" title="观测系统信息及设备信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>瞬变电磁参数信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="采集装置类型" field="sbdcType" rules={[{ required: true, message: '请选择采集装置类型' }]}>
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>重叠回线</Select.Option>
+                        <Select.Option value={2}>中心回线</Select.Option>
+                        <Select.Option value={3}>偶级装置</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="发射框位置里程" field="fskwzlc" extra="单位：m，保留2位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={2} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="发射框长" field="fskc" extra="单位：m，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="发射框宽" field="fskk" extra="单位：m，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="激发线圈匝数" field="jfxqzs" extra="单位：个，不超过3位整数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" min={0} max={999} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="接收框长" field="jskc" extra="单位：m，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="接收框宽" field="jskk" extra="单位：m，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="接收框匝数" field="jskzs" extra="单位：个，不超过3位整数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" min={0} max={999} />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="接收线圈等效面积" field="jsxqdxmj" extra="单位：m²，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m²" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="收发距" field="sf" extra="单位：m，保留1位小数（仅偶级装置必填）">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>设备信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="设备名称" field="sbName">
+                      <Input placeholder="" maxLength={20} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>瞬变电磁成果信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="发射频率" field="fspl" extra="单位：Hz，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="Hz" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="供电电流" field="gddl" extra="单位：A，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="A" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="测量时间" field="clsj" extra="单位：ms，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="ms" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="盲区范围" field="mqfw" extra="单位：m，保留1位小数">
+                      <InputNumber style={{ width: '100%' }} placeholder="" precision={1} min={0} suffix="m" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={16}>
+                    <Form.Item label="测线布置描述" field="cxbzms">
+                      <TextArea rows={2} placeholder="请输入测线布置描述" maxLength={200} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="attachment" title="附件及成果图">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件及成果图信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="附件（word/pdf）" field="addition">
+                      <Upload
+                        drag
+                        action="/api/v1/sbdc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'addition' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="作业现场照片" field="images">
+                      <Upload
+                        drag
+                        action="/api/v1/sbdc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'images' }}
+                        accept="image/*"
+                        limit={5}
+                        listType="picture-card"
+                        tip="支持多张图片"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="成果图" field="cgt">
+                      <Upload
+                        drag
+                        action="/api/v1/sbdc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'cgt' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+          </Tabs>
+        );
+      }
+
+      // WZJC 专用表单 - 4个选项卡 (微震监测预报)
+      const isWZJC = methodParam === '7';
+      if (isWZJC) {
+        return (
+          <Tabs type="line">
+            <TabPane key="basic" title="基本信息及其他信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>基本信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报方法" field="method">
+                      <Select disabled placeholder="微震监测预报">
+                        <Select.Option value={7}>微震监测预报</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
+                      <DatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="微震监测预报" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入起始里程' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" precision={2} />
+                        </Form.Item>
+                        <span>+</span>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber style={{ width: '150px' }} placeholder="0" precision={2} />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Form.Item label="预报长度" field="ybLength" rules={[{ required: true, message: '请输入预报长度' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" precision={2} min={0} />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人" field="testname">
+                      <Input placeholder="检测人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人身份证" field="testno">
+                      <Input placeholder="检测人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="检测人电话" field="testtel">
+                      <Input placeholder="检测人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人" field="monitorname">
+                      <Input placeholder="复核人" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人身份证" field="monitorno">
+                      <Input placeholder="复核人身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="复核人电话" field="monitortel">
+                      <Input placeholder="复核人电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理工程师" field="supervisorname">
+                      <Input placeholder="监理工程师" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理身份证" field="supervisorno">
+                      <Input placeholder="监理身份证" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="监理电话" field="supervisortel">
+                      <Input placeholder="监理电话" />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>其他信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="预报分段结论" field="conclusionyb">
+                      <TextArea rows={4} placeholder="请输入预报分段结论" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="后续建议" field="suggestion">
+                      <TextArea rows={4} placeholder="请输入后续建议" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="实际采取措施" field="solution">
+                      <TextArea rows={4} placeholder="请输入实际采取措施" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea rows={4} placeholder="请输入备注" maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="segments" title="分段信息及下次超前地质预报">
+              <TspSegmentsTab
+                form={form}
+                ybjgList={ybjgList}
+                onListChange={setYbjgList}
+                onRemoteSave={handlePartialSave}
+              />
+            </TabPane>
+
+            <TabPane key="system_device" title="观测系统信息及设备信息">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', fontWeight: 'bold' }}>描述</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="监测信息" field="jcxx">
+                      <TextArea placeholder="请输入监测信息" rows={4} maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="设备信息" field="sbxx">
+                      <TextArea placeholder="请输入设备信息" rows={4} maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={12}>
+                    <Form.Item label="成果信息" field="cgxx">
+                      <TextArea placeholder="请输入成果信息" rows={4} maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Form.Item label="成果数据信息" field="cgsjxx">
+                      <TextArea placeholder="请输入成果数据信息" rows={4} maxLength={512} showWordLimit />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+
+            <TabPane key="attachment" title="附件及成果图">
+              <div style={{ padding: '20px' }}>
+                <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件及成果图信息</div>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="原始文件" field="originalfile">
+                      <Upload
+                        drag
+                        action="/api/v1/wzjc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'originalfile' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="附件（基础报告）" field="addition">
+                      <Upload
+                        drag
+                        action="/api/v1/wzjc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'addition' }}
+                        limit={1}
+                        tip="点击或拖拽上传"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="作业现场图序" field="images">
+                      <Upload
+                        drag
+                        action="/api/v1/wzjc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'images' }}
+                        accept="image/*"
+                        limit={5}
+                        listType="picture-card"
+                        tip="支持多张图片"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+                <Grid.Row gutter={24}>
+                  <Grid.Col span={8}>
+                    <Form.Item label="观测系统布置图" field="gcsysbzt">
+                      <Upload
+                        drag
+                        action="/api/v1/wzjc/file/upload"
+                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
+                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'gcsysbzt' }}
+                        accept="image/*"
+                        limit={1}
+                        listType="picture-card"
+                        tip="支持 jpg、png 等图片格式"
+                      />
+                    </Form.Item>
+                  </Grid.Col>
+                </Grid.Row>
+              </div>
+            </TabPane>
+          </Tabs>
+        );
+      }
       
       return (
         <Tabs type="line">
@@ -1033,13 +3291,43 @@ function GeologyForecastEditPage() {
               ) : (
                 <>
                   <Grid.Col span={8}>
-                    <Form.Item label="掌子面里程" field="dkilo" rules={[{ required: true, message: '请输入掌子面里程' }]}>
-                      <InputNumber style={{ width: '100%' }} placeholder="里程数值" />
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="dkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber 
+                            style={{ width: '80px' }} 
+                            placeholder="0" 
+                            min={0}
+                            precision={0}
+                          />
+                        </Form.Item>
+                        <span style={{ margin: '0 4px' }}>+</span>
+                        <Form.Item field="dkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber 
+                            style={{ width: '80px' }} 
+                            placeholder="0" 
+                            min={0}
+                            max={999}
+                            precision={0}
+                          />
+                        </Form.Item>
+                      </Space>
                     </Form.Item>
                   </Grid.Col>
                   <Grid.Col span={8}>
-                    <Form.Item label="预报长度" field="ybLength">
-                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" />
+                    <Form.Item 
+                      label="预报长度" 
+                      field="ybLength"
+                      extra="单位:m，保留2位小数，整数位不得超过5位"
+                    >
+                      <InputNumber 
+                        style={{ width: '100%' }} 
+                        placeholder="预报长度" 
+                        precision={2}
+                        step={1}
+                        min={0}
+                        max={99999.99}
+                      />
                     </Form.Item>
                   </Grid.Col>
                 </>

@@ -13,11 +13,11 @@ import {
   Spin,
   Space,
   Upload,
-  Table,
-  Modal
+  Table
 } from '@arco-design/web-react'
 import { IconLeft, IconSave, IconPlus } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
+import SegmentModal, { SegmentData } from '../components/SegmentModal'
 
 const { TextArea } = Input
 const TabPane = Tabs.TabPane
@@ -40,53 +40,33 @@ function TunnelSketchEditPage() {
   
   // 分段信息弹窗相关状态
   const [segmentModalVisible, setSegmentModalVisible] = useState(false)
-  const [editingSegmentIndex, setEditingSegmentIndex] = useState<number | null>(null)
-  const [segmentForm] = Form.useForm()
-  const [selectedDzjb, setSelectedDzjb] = useState<string>('green')
+  const [editingSegment, setEditingSegment] = useState<SegmentData | null>(null)
 
   // 打开新增分段弹窗
   const handleOpenSegmentModal = () => {
-    setEditingSegmentIndex(null)
-    segmentForm.resetFields()
-    setSelectedDzjb('green')
-    segmentForm.setFieldsValue({
-      dkname: form.getFieldValue('dkname') || 'DK',
-      sdkilo: 0,
-      edkilo: 0,
-      ybjgTime: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      risklevel: '',
-      wylevel: 0,
-      jlresult: '',
-      dzjb: 'green',
-    })
+    setEditingSegment(null)
     setSegmentModalVisible(true)
   }
 
   // 打开编辑分段弹窗
   const handleEditSegment = (index: number) => {
-    setEditingSegmentIndex(index)
-    const segment = segmentList[index]
-    segmentForm.setFieldsValue(segment)
-    setSelectedDzjb(segment.dzjb || 'green')
+    setEditingSegment({ ...segmentList[index], _index: index } as any)
     setSegmentModalVisible(true)
   }
 
   // 确认添加/编辑分段
-  const handleConfirmSegment = async () => {
-    try {
-      const values = await segmentForm.validate()
-      const dataWithDzjb = { ...values, dzjb: selectedDzjb }
-      if (editingSegmentIndex !== null) {
-        const newSegments = [...segmentList]
-        newSegments[editingSegmentIndex] = { ...newSegments[editingSegmentIndex], ...dataWithDzjb }
-        setSegmentList(newSegments)
-      } else {
-        setSegmentList([...segmentList, { ...dataWithDzjb, ybjgPk: 0, ybjgId: 0, ybPk: 0 }])
-      }
-      setSegmentModalVisible(false)
-    } catch (e) {
-      // 表单验证失败
+  const handleConfirmSegment = (data: SegmentData) => {
+    const segmentWithIndex = editingSegment as any
+    if (segmentWithIndex && segmentWithIndex._index !== undefined) {
+      // 编辑模式
+      const newSegments = [...segmentList]
+      newSegments[segmentWithIndex._index] = data
+      setSegmentList(newSegments)
+    } else {
+      // 新增模式
+      setSegmentList([...segmentList, data])
     }
+    setSegmentModalVisible(false)
   }
 
   // 删除分段
@@ -111,7 +91,14 @@ function TunnelSketchEditPage() {
         const detail = await apiAdapter.getTunnelSketchDetail(id)
         if (detail) {
           setDetailData(detail)
-          form.setFieldsValue(detail)
+          // 里程拆分：将 dkilo 拆分为 dkiloKm 和 dkiloM
+          let dkiloKm, dkiloM;
+          if (detail.dkilo !== undefined && detail.dkilo !== null) {
+            dkiloKm = Math.floor(detail.dkilo / 1000);
+            dkiloM = detail.dkilo % 1000;
+          }
+          const formData = { ...detail, dkiloKm, dkiloM };
+          form.setFieldsValue(formData)
           console.log('✅ 洞身素描详情数据:', detail)
           
           // 检查图片字段
@@ -180,6 +167,9 @@ function TunnelSketchEditPage() {
         }
       }
       
+      // 里程合并：将 dkiloKm 和 dkiloM 合并为 dkilo
+      const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
+      
       // 构建符合API规范的提交数据
       const submitData = {
         // 基础字段 - PK字段临时设为null（后端修复后恢复）
@@ -187,7 +177,7 @@ function TunnelSketchEditPage() {
         ybId: detailData?.ybId || 0,
         siteId: siteId || detailData?.siteId || '',
         dkname: values.dkname || '',
-        dkilo: values.dkilo || 0,
+        dkilo: dkilo,
         ybLength: detailData?.ybLength || 0,
         monitordate: monitordate || now,
         createdate: detailData?.createdate || now,
@@ -389,12 +379,12 @@ function TunnelSketchEditPage() {
                   <Col span={8}>
                     <Form.Item label="掌子面里程" required>
                       <Space>
-                        <Form.Item field="dkname2" noStyle>
-                          <Input style={{ width: 80 }} placeholder="DK" disabled />
+                        <Form.Item field="dkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber style={{ width: 100 }} placeholder="180" precision={0} min={0} />
                         </Form.Item>
                         <span>+</span>
-                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
-                          <InputNumber style={{ width: 100 }} placeholder="0" precision={0} />
+                        <Form.Item field="dkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber style={{ width: 100 }} placeholder="972" precision={0} min={0} max={999} />
                         </Form.Item>
                       </Space>
                     </Form.Item>
@@ -952,123 +942,13 @@ function TunnelSketchEditPage() {
       </div>
 
       {/* 分段信息新增/编辑弹窗 */}
-      <Modal
-        title={editingSegmentIndex !== null ? '编辑分段信息' : '新增分段信息'}
+      <SegmentModal
         visible={segmentModalVisible}
-        onOk={handleConfirmSegment}
         onCancel={() => setSegmentModalVisible(false)}
-        okText="确认"
-        cancelText="取消"
-        style={{ width: 700 }}
-      >
-        <Form form={segmentForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
-                <Input placeholder="例如: DK" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="围岩等级" field="wylevel" rules={[{ required: true, message: '请选择围岩等级' }]}>
-                <Select placeholder="请选择">
-                  <Select.Option value={1}>Ⅰ级</Select.Option>
-                  <Select.Option value={2}>Ⅱ级</Select.Option>
-                  <Select.Option value={3}>Ⅲ级</Select.Option>
-                  <Select.Option value={4}>Ⅳ级</Select.Option>
-                  <Select.Option value={5}>Ⅴ级</Select.Option>
-                  <Select.Option value={6}>Ⅵ级</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="开始里程" required>
-                <Space>
-                  <Form.Item field="sdkname" noStyle>
-                    <Input style={{ width: 80 }} placeholder="DK" />
-                  </Form.Item>
-                  <span>+</span>
-                  <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入开始里程值' }]}>
-                    <InputNumber style={{ width: 120 }} precision={2} placeholder="里程值" />
-                  </Form.Item>
-                </Space>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="结束里程" required>
-                <Space>
-                  <Form.Item field="edkname" noStyle>
-                    <Input style={{ width: 80 }} placeholder="DK" />
-                  </Form.Item>
-                  <span>+</span>
-                  <Form.Item field="edkilo" noStyle rules={[{ required: true, message: '请输入结束里程值' }]}>
-                    <InputNumber style={{ width: 120 }} precision={2} placeholder="里程值" />
-                  </Form.Item>
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item label="产生时间" field="ybjgTime" rules={[{ required: true, message: '请选择产生时间' }]}>
-                <DatePicker showTime style={{ width: '100%' }} placeholder="请选择日期时间" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="风险类别" field="risklevel" rules={[{ required: true, message: '请选择风险类别' }]}>
-                <Select placeholder="请选择风险类别">
-                  <Select.Option value="破碎带">破碎带</Select.Option>
-                  <Select.Option value="岩溶">岩溶</Select.Option>
-                  <Select.Option value="瓦斯">瓦斯</Select.Option>
-                  <Select.Option value="涌水">涌水</Select.Option>
-                  <Select.Option value="突泥">突泥</Select.Option>
-                  <Select.Option value="地应力">地应力</Select.Option>
-                  <Select.Option value="采空区">采空区</Select.Option>
-                  <Select.Option value="岩爆">岩爆</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="地质级别">
-                <Space>
-                  <span>已选:</span>
-                  <Button 
-                    size="small" 
-                    style={{ backgroundColor: selectedDzjb === 'green' ? '#52c41a' : '#f0f0f0', color: selectedDzjb === 'green' ? '#fff' : '#333' }}
-                    onClick={() => setSelectedDzjb('green')}
-                  >
-                    绿色
-                  </Button>
-                  <Button 
-                    size="small" 
-                    style={{ backgroundColor: selectedDzjb === 'yellow' ? '#faad14' : '#f0f0f0', color: selectedDzjb === 'yellow' ? '#fff' : '#333' }}
-                    onClick={() => setSelectedDzjb('yellow')}
-                  >
-                    黄色
-                  </Button>
-                  <Button 
-                    size="small" 
-                    style={{ backgroundColor: selectedDzjb === 'red' ? '#ff4d4f' : '#f0f0f0', color: selectedDzjb === 'red' ? '#fff' : '#333' }}
-                    onClick={() => setSelectedDzjb('red')}
-                  >
-                    红色
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item label="预报结论" field="jlresult">
-                <TextArea placeholder="请输入预报结论..." rows={4} maxLength={500} showWordLimit />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+        onOk={handleConfirmSegment}
+        editingData={editingSegment}
+        defaultDkname={form.getFieldValue('dkname') || 'DK'}
+      />
     </div>
   )
 }

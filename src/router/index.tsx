@@ -18,6 +18,7 @@ import ApiTestPage from '../pages/ApiTestPage'
 import SwaggerAnalyzer from '../pages/SwaggerAnalyzer'
 import BusinessDataPage from '../pages/BusinessDataPage'
 import UserManagementPage from '../pages/UserManagementPage'
+import AdminPage from '../pages/admin/AdminPage'
 import ProtectedRoute from '../components/ProtectedRoute'
 
 const router = createBrowserRouter([
@@ -176,6 +177,14 @@ const router = createBrowserRouter([
   {
     path: 'user-management',
     element: <UserManagementPage />
+  },
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute>
+        <AdminPage />
+      </ProtectedRoute>
+    )
   }
 ])
 
