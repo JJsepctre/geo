@@ -1457,6 +1457,59 @@ class APIAdapter {
       return { success: true };
     }
   }
+
+  // ========== 文件上传方法 ==========
+
+  /**
+   * 上传物探法文件
+   * @param method 物探方法代码 (1=TSP, 2=HSP, 3=LDSN, 4=DCBFS, 5=GFBZLD, 6=SBDC)
+   * @param ybPk 预报主键
+   * @param siteId 工点ID
+   * @param files 文件对象 { pic1?: File, pic2?: File, ... }
+   */
+  async uploadGeophysicalFiles(
+    method: number,
+    ybPk: string,
+    siteId: string,
+    files: { [key: string]: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    if (USE_REAL_API) {
+      return realAPI.uploadGeophysicalFiles(method, ybPk, siteId, files);
+    } else {
+      return { success: true };
+    }
+  }
+
+  /**
+   * 上传地表补充文件
+   */
+  async uploadSurfaceSupplementFiles(
+    ybPk: string,
+    siteId: string,
+    files: { addition?: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    if (USE_REAL_API) {
+      return realAPI.uploadSurfaceSupplementFiles(ybPk, siteId, files);
+    } else {
+      return { success: true };
+    }
+  }
+
+  /**
+   * 上传钻探法文件
+   */
+  async uploadDrillingFiles(
+    ybPk: string,
+    siteId: string,
+    method: number,
+    files: { [key: string]: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    if (USE_REAL_API) {
+      return realAPI.uploadDrillingFiles(ybPk, siteId, method, files);
+    } else {
+      return { success: true };
+    }
+  }
 }
 
 // 导出单例

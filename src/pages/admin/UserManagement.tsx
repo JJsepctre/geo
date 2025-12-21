@@ -56,7 +56,7 @@ function UserManagement() {
         params: { pageNum: page, pageSize }
       })
       console.log('📋 [Admin] 用户列表:', res)
-      if (res.resultcode === 0 && res.data) {
+      if ((res.resultcode === 0 || res.resultcode === 200) && res.data) {
         setData(res.data.records || [])
         setTotal(res.data.total || 0)
       }
@@ -74,7 +74,7 @@ function UserManagement() {
       const res = await http.get('/api/admin/role/list', {
         params: { pageNum: 1, pageSize: 100 }
       })
-      if (res.resultcode === 0 && res.data) {
+      if ((res.resultcode === 0 || res.resultcode === 200) && res.data) {
         setRoleList(res.data.records || [])
       }
     } catch (error) {
@@ -86,7 +86,7 @@ function UserManagement() {
   const fetchUserRole = async (userPk: number) => {
     try {
       const res = await http.get(`/api/admin/role/${userPk}`)
-      if (res.resultcode === 0 && res.data && res.data.length > 0) {
+      if ((res.resultcode === 0 || res.resultcode === 200) && res.data && res.data.length > 0) {
         setSelectedRolePk(res.data[0].rolePk)
       }
     } catch (error) {

@@ -70,6 +70,48 @@
         }
     ],
     "paths": {
+        "/test/save": {
+            "put": {
+                "tags": [
+                    "test-controller"
+                ],
+                "operationId": "testRequestPart",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "dto",
+                                    "file"
+                                ],
+                                "type": "object",
+                                "properties": {
+                                    "dto": {
+                                        "$ref": "#/components/schemas/TestDTO"
+                                    },
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/zzmsm/{ybPk}": {
             "get": {
                 "tags": [
@@ -198,16 +240,16 @@
                 ],
                 "summary": "更新加深炮孔数据",
                 "operationId": "updateJspk",
-                "parameters": [
-                    {
-                        "name": "jspkDTO",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/components/schemas/JspkDTO"
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/JspkDTO"
+                            }
                         }
-                    }
-                ],
+                    },
+                    "required": true
+                },
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1382,16 +1424,16 @@
                 ],
                 "summary": "更新地表补充数据",
                 "operationId": "updateDbbc",
-                "parameters": [
-                    {
-                        "name": "dbbcDTO",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/components/schemas/DbbcDTO"
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DbbcDTO"
+                            }
                         }
-                    }
-                ],
+                    },
+                    "required": true
+                },
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1576,16 +1618,16 @@
                 ],
                 "summary": "新增加深炮孔数据",
                 "operationId": "createJspk",
-                "parameters": [
-                    {
-                        "name": "jspkDTO",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/components/schemas/JspkDTO"
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/JspkDTO"
+                            }
                         }
-                    }
-                ],
+                    },
+                    "required": true
+                },
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2412,16 +2454,16 @@
                 ],
                 "summary": "新增地表补充数据",
                 "operationId": "createDbbc",
-                "parameters": [
-                    {
-                        "name": "dbbcDTO",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/components/schemas/DbbcDTO"
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DbbcDTO"
+                            }
                         }
-                    }
-                ],
+                    },
+                    "required": true
+                },
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3332,6 +3374,33 @@
     },
     "components": {
         "schemas": {
+            "TestDTO": {
+                "type": "object",
+                "properties": {
+                    "name1": {
+                        "type": "string"
+                    },
+                    "name2": {
+                        "type": "string"
+                    },
+                    "name3": {
+                        "type": "string"
+                    },
+                    "name4": {
+                        "type": "string"
+                    },
+                    "name5": {
+                        "type": "string"
+                    },
+                    "name6": {
+                        "type": "string"
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary"
+                    }
+                }
+            },
             "YbjgDTO": {
                 "type": "object",
                 "properties": {

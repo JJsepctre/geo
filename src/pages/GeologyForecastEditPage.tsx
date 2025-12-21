@@ -77,6 +77,9 @@ function GeologyForecastEditPage() {
   const [currentGfbzldDj, setCurrentGfbzldDj] = useState<any>(null)
   const [currentGfbzldDjIndex, setCurrentGfbzldDjIndex] = useState<number>(-1)
   const [gfbzldDjForm] = Form.useForm()
+  
+  // 文件上传状态（用于 GFBZLD 等需要文件上传的方法）
+  const [uploadingFile, setUploadingFile] = useState(false)
 
   // 判断是否为新增模式
   const isCreateMode = id === 'new';
@@ -743,6 +746,45 @@ function GeologyForecastEditPage() {
     } catch (error: any) {
       console.error('局部保存失败:', error);
       Message.error('更新失败: ' + error.message);
+    }
+  };
+
+  // 文件上传处理（用于 GFBZLD 等需要单独上传文件的方法）
+  const handleFileUpload = async (file: File, fieldName: string) => {
+    console.log('📤 [文件上传] 检查参数:', { id, record, siteId: record?.siteId });
+    
+    if (!id || id === 'new' || !record?.siteId) {
+      Message.warning('请先保存基本信息后再上传文件');
+      return { status: 'error' };
+    }
+
+    try {
+      setUploadingFile(true);
+      const method = Number(methodParam);
+      const ybPk = record.ybPk || id;
+      // 优先从 record 获取 siteId，如果没有则从 URL 参数获取
+      const siteId = record.siteId || searchParams.get('siteId') || '';
+      
+      console.log('📤 [文件上传] 开始上传:', { method, ybPk, siteId, fieldName, fileName: file.name });
+      
+      // 构建文件对象
+      const files: { [key: string]: File } = { [fieldName]: file };
+      
+      const result = await apiAdapter.uploadGeophysicalFiles(method, String(ybPk), siteId, files);
+      
+      if (result?.success) {
+        Message.success(`${fieldName} 上传成功`);
+        return { status: 'done', response: result };
+      } else {
+        Message.error(result?.message || '文件上传失败');
+        return { status: 'error' };
+      }
+    } catch (error: any) {
+      console.error('文件上传失败:', error);
+      Message.error('文件上传失败: ' + error.message);
+      return { status: 'error' };
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -2604,102 +2646,72 @@ function GeologyForecastEditPage() {
             <TabPane key="attachments" title="附件及成果图">
               <div style={{ padding: '20px' }}>
                 <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>附件及成果图信息</div>
+                {isCreateMode && (
+                  <div style={{ color: '#ff7d00', marginBottom: 16 }}>
+                    提示：请先保存基本信息后再上传文件
+                  </div>
+                )}
                 <Grid.Row gutter={24}>
                   <Grid.Col span={8}>
-                    <Form.Item label="原始文件" field="originalfile">
+                    <Form.Item label="成果图1 (pic1)">
                       <Upload
                         drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'originalfile' }}
-                        limit={1}
-                        tip="点击或拖拽上传"
-                      />
-                    </Form.Item>
-                  </Grid.Col>
-                  <Grid.Col span={8}>
-                    <Form.Item label="附件（其他报告）" field="addition">
-                      <Upload
-                        drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'addition' }}
-                        limit={1}
-                        tip="点击或拖拽上传"
-                      />
-                    </Form.Item>
-                  </Grid.Col>
-                  <Grid.Col span={8}>
-                    <Form.Item label="作业现场照片" field="images">
-                      <Upload
-                        drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'images' }}
-                        accept="image/*"
-                        limit={5}
-                        listType="picture-card"
-                        tip="支持多张图片"
-                      />
-                    </Form.Item>
-                  </Grid.Col>
-                </Grid.Row>
-                <Grid.Row gutter={24}>
-                  <Grid.Col span={8}>
-                    <Form.Item label="观测系统布置图" field="gcxtpic">
-                      <Upload
-                        drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'gcxtpic' }}
+                        disabled={isCreateMode || uploadingFile}
                         accept="image/*"
                         limit={1}
                         listType="picture-card"
-                        tip="支持 jpg、png 等图片格式"
+                        tip={isCreateMode ? "请先保存基本信息" : "点击或拖拽上传图片"}
+                        customRequest={async (options) => {
+                          const { file, onSuccess, onError } = options;
+                          const result = await handleFileUpload(file as File, 'pic1');
+                          if (result.status === 'done') {
+                            onSuccess?.(result.response);
+                          } else {
+                            onError?.(new Error('上传失败'));
+                          }
+                        }}
                       />
                     </Form.Item>
                   </Grid.Col>
                   <Grid.Col span={8}>
-                    <Form.Item label="电势等值线图" field="dsdzxt">
+                    <Form.Item label="成果图2 (pic2)">
                       <Upload
                         drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'dsdzxt' }}
+                        disabled={isCreateMode || uploadingFile}
                         accept="image/*"
                         limit={1}
                         listType="picture-card"
-                        tip="支持 jpg、png 等图片格式"
+                        tip={isCreateMode ? "请先保存基本信息" : "点击或拖拽上传图片"}
+                        customRequest={async (options) => {
+                          const { file, onSuccess, onError } = options;
+                          const result = await handleFileUpload(file as File, 'pic2');
+                          if (result.status === 'done') {
+                            onSuccess?.(result.response);
+                          } else {
+                            onError?.(new Error('上传失败'));
+                          }
+                        }}
                       />
                     </Form.Item>
                   </Grid.Col>
                   <Grid.Col span={8}>
-                    <Form.Item label="成果图" field="cgt">
+                    <Form.Item label="成果图3 (pic3)">
                       <Upload
                         drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'cgt' }}
+                        disabled={isCreateMode || uploadingFile}
                         accept="image/*"
                         limit={1}
                         listType="picture-card"
-                        tip="支持 jpg、png 等图片格式"
-                      />
-                    </Form.Item>
-                  </Grid.Col>
-                </Grid.Row>
-                <Grid.Row gutter={24}>
-                  <Grid.Col span={8}>
-                    <Form.Item label="平剖图" field="ppt">
-                      <Upload
-                        drag
-                        action="/api/v1/gfbzld/file/upload"
-                        headers={{ Authorization: `Bearer ${localStorage.getItem('token')}` }}
-                        data={{ ybPk: id, siteId: record?.siteId || '', fileType: 'ppt' }}
-                        accept="image/*"
-                        limit={1}
-                        listType="picture-card"
-                        tip="支持 jpg、png 等图片格式"
+                        tip={isCreateMode ? "请先保存基本信息" : "点击或拖拽上传图片"}
+                        customRequest={async (options) => {
+                          const { file, onSuccess, onError } = options;
+                          const result = await handleFileUpload(file as File, 'pic3');
+                          if (result.status === 'done') {
+                            onSuccess?.(result.response);
+                          } else {
+                            onError?.(new Error('上传失败'));
+                          }
+                        }}
                       />
                     </Form.Item>
                   </Grid.Col>

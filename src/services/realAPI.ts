@@ -5185,25 +5185,268 @@ class RealAPIService {
     }
   }
 
-  // ========== 补充的API方法 ==========
+  // ========== 文件上传API方法 ==========
 
   /**
-   * 上传物探法数据
+   * 上传物探法文件（通用方法）
+   * @param method 物探方法代码 (1=TSP, 2=HSP, 3=LDSN, 4=DCBFS, 5=GFBZLD, 6=SBDC)
+   * @param ybPk 预报主键
+   * @param siteId 工点ID
+   * @param files 文件对象 { pic1?: File, pic2?: File, ... }
    */
-  async uploadGeophysicalData(id: string): Promise<{ success: boolean }> {
+  async uploadGeophysicalFiles(
+    method: number,
+    ybPk: string,
+    siteId: string,
+    files: { [key: string]: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    console.log('🚀 [realAPI] uploadGeophysicalFiles 被调用:', { method, ybPk, siteId, filesKeys: Object.keys(files) });
+    
     try {
-      const response = await post<BaseResponse>(`/api/v1/wtf/${id}/upload`, {});
+      // 根据 method 确定 API 路径
+      let apiPath = '';
+      switch (method) {
+        case 1:
+          apiPath = `/api/v1/wtf/tsp/${ybPk}/file`;
+          break;
+        case 2:
+          apiPath = `/api/v1/wtf/hsp/${ybPk}/file`;
+          break;
+        case 3:
+          apiPath = `/api/v1/wtf/ldsn/${ybPk}/file`;
+          break;
+        case 4:
+          apiPath = `/api/v1/wtf/dcbfs/${ybPk}/file`;
+          break;
+        case 5:
+          apiPath = `/api/v1/wtf/gfbzld/${ybPk}/file`;
+          break;
+        case 6:
+          apiPath = `/api/v1/wtf/sbdc/${ybPk}/file`;
+          break;
+        case 9:
+          apiPath = `/api/v1/wtf/wzjc/${ybPk}/file`;
+          break;
+        default:
+          console.error('❌ [realAPI] uploadGeophysicalFiles 不支持的 method:', method);
+          return { success: false, message: '不支持的物探方法' };
+      }
 
-      if (response.resultcode === 200) {
-        console.log('✅ [realAPI] uploadGeophysicalData 成功');
+      // ybPk 和 siteId 作为 query 参数，文件通过 FormData 上传
+      const queryString = `?ybPk=${ybPk}&siteId=${encodeURIComponent(siteId)}`;
+      const fullApiPath = `${apiPath}${queryString}`;
+
+      // 构建 FormData - 只放文件
+      const formData = new FormData();
+
+      // 添加文件（pic1, pic2, pic3 等）
+      let hasFile = false;
+      Object.keys(files).forEach(key => {
+        const file = files[key];
+        if (file && file instanceof File) {
+          formData.append(key, file, file.name);
+          hasFile = true;
+          console.log('📎 [realAPI] 添加文件:', {
+            fieldName: key,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
+          });
+        } else {
+          console.warn('⚠️ [realAPI] 文件无效:', key, file);
+        }
+      });
+
+      if (!hasFile) {
+        console.error('❌ [realAPI] 没有有效的文件要上传');
+        return { success: false, message: '没有有效的文件要上传' };
+      }
+
+      console.log('📤 [realAPI] uploadGeophysicalFiles:', { method, ybPk, siteId, files: Object.keys(files), fullApiPath });
+
+      // POST 请求，ybPk/siteId 在 URL query 中，文件在 FormData 中
+      const response = await post<any>(fullApiPath, formData);
+
+      if (response === true || response?.resultcode === 200 || response?.resultcode === 0) {
+        console.log('✅ [realAPI] uploadGeophysicalFiles 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] uploadGeophysicalData 失败:', response.message);
-        return { success: false };
+        console.error('❌ [realAPI] uploadGeophysicalFiles 失败:', response?.message || response);
+        return { success: false, message: response?.message || '文件上传失败' };
       }
-    } catch (error) {
-      console.error('❌ [realAPI] uploadGeophysicalData 异常:', error);
-      return { success: false };
+    } catch (error: any) {
+      console.error('❌ [realAPI] uploadGeophysicalFiles 异常:', error);
+      return { success: false, message: error?.message || '文件上传异常' };
+    }
+  }
+
+  /**
+   * 上传地表补充文件
+   * @param ybPk 预报主键
+   * @param siteId 工点ID
+   * @param files 文件对象 { addition?: File }
+   */
+  async uploadSurfaceSupplementFiles(
+    ybPk: string,
+    siteId: string,
+    files: { addition?: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('ybPk', ybPk);
+      formData.append('siteId', siteId);
+
+      if (files.addition) {
+        formData.append('addition', files.addition);
+      }
+
+      console.log('📤 [realAPI] uploadSurfaceSupplementFiles 上传文件:', { ybPk, siteId });
+
+      const response = await post<any>(`/api/v1/dbbc/${ybPk}/file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response === true || response?.resultcode === 200 || response?.resultcode === 0) {
+        console.log('✅ [realAPI] uploadSurfaceSupplementFiles 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] uploadSurfaceSupplementFiles 失败:', response?.message || response);
+        return { success: false, message: response?.message || '文件上传失败' };
+      }
+    } catch (error: any) {
+      console.error('❌ [realAPI] uploadSurfaceSupplementFiles 异常:', error);
+      return { success: false, message: error?.message || '文件上传异常' };
+    }
+  }
+
+  /**
+   * 上传钻探法（超前水平钻）文件
+   * @param ybPk 预报主键
+   * @param siteId 工点ID
+   * @param files 文件对象
+   */
+  async uploadDrillingFiles(
+    ybPk: string,
+    siteId: string,
+    method: number,
+    files: { [key: string]: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('ybPk', ybPk);
+      formData.append('siteId', siteId);
+
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          formData.append(key, files[key]);
+        }
+      });
+
+      // 根据 method 确定路径
+      const apiPath = method === 14 
+        ? `/api/v1/ztf/jspk/${ybPk}/file` 
+        : `/api/v1/ztf/cqspz/${ybPk}/file`;
+
+      console.log('📤 [realAPI] uploadDrillingFiles 上传文件:', { ybPk, siteId, method });
+
+      const response = await post<any>(apiPath, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response === true || response?.resultcode === 200 || response?.resultcode === 0) {
+        console.log('✅ [realAPI] uploadDrillingFiles 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] uploadDrillingFiles 失败:', response?.message || response);
+        return { success: false, message: response?.message || '文件上传失败' };
+      }
+    } catch (error: any) {
+      console.error('❌ [realAPI] uploadDrillingFiles 异常:', error);
+      return { success: false, message: error?.message || '文件上传异常' };
+    }
+  }
+
+  /**
+   * 上传掌子面素描文件
+   */
+  async uploadPalmSketchFiles(
+    ybPk: string,
+    siteId: string,
+    files: { [key: string]: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('ybPk', ybPk);
+      formData.append('siteId', siteId);
+
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          formData.append(key, files[key]);
+        }
+      });
+
+      console.log('📤 [realAPI] uploadPalmSketchFiles 上传文件:', { ybPk, siteId });
+
+      const response = await post<any>(`/api/v1/zzmsm/${ybPk}/file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response === true || response?.resultcode === 200 || response?.resultcode === 0) {
+        console.log('✅ [realAPI] uploadPalmSketchFiles 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] uploadPalmSketchFiles 失败:', response?.message || response);
+        return { success: false, message: response?.message || '文件上传失败' };
+      }
+    } catch (error: any) {
+      console.error('❌ [realAPI] uploadPalmSketchFiles 异常:', error);
+      return { success: false, message: error?.message || '文件上传异常' };
+    }
+  }
+
+  /**
+   * 上传洞身素描文件
+   */
+  async uploadTunnelSketchFiles(
+    ybPk: string,
+    siteId: string,
+    files: { [key: string]: File }
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('ybPk', ybPk);
+      formData.append('siteId', siteId);
+
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          formData.append(key, files[key]);
+        }
+      });
+
+      console.log('📤 [realAPI] uploadTunnelSketchFiles 上传文件:', { ybPk, siteId });
+
+      const response = await post<any>(`/api/v1/dssm/${ybPk}/file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response === true || response?.resultcode === 200 || response?.resultcode === 0) {
+        console.log('✅ [realAPI] uploadTunnelSketchFiles 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] uploadTunnelSketchFiles 失败:', response?.message || response);
+        return { success: false, message: response?.message || '文件上传失败' };
+      }
+    } catch (error: any) {
+      console.error('❌ [realAPI] uploadTunnelSketchFiles 异常:', error);
+      return { success: false, message: error?.message || '文件上传异常' };
     }
   }
 

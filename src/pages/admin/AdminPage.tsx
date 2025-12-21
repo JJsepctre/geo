@@ -142,6 +142,27 @@ function AdminPage() {
           </Breadcrumb>
           
           {renderContent()}
+
+          {/* 底部备案信息 */}
+          <div style={{
+            textAlign: 'center',
+            padding: '16px 0',
+            marginTop: '24px',
+            color: '#86909c',
+            fontSize: '13px'
+          }}>
+            <a 
+              href="https://beian.miit.gov.cn/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#86909c', 
+                textDecoration: 'none',
+              }}
+            >
+              京ICP备2025153338号
+            </a>
+          </div>
         </Content>
       </Layout>
     </Layout>

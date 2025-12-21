@@ -25,7 +25,7 @@ function RoleManagement() {
         params: { pageNum: page, pageSize }
       })
       console.log('📋 [Admin] 角色列表:', res)
-      if (res.resultcode === 0 && res.data) {
+      if ((res.resultcode === 0 || res.resultcode === 200) && res.data) {
         setData(res.data.records || [])
         setTotal(res.data.total || 0)
       }
