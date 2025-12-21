@@ -79,7 +79,7 @@ function TunnelSketchEditPage() {
   // 获取详情数据
   useEffect(() => {
     const fetchDetail = async () => {
-      if (!id) return
+      if (!id || id === 'new') return  // 新增模式不需要获取详情
       
       setLoading(true)
       try {
@@ -97,7 +97,13 @@ function TunnelSketchEditPage() {
             dkiloKm = Math.floor(detail.dkilo / 1000);
             dkiloM = detail.dkilo % 1000;
           }
-          const formData = { ...detail, dkiloKm, dkiloM };
+          // 开始里程拆分：将 beginkilo 拆分为 beginkiloKm 和 beginkiloM
+          let beginkiloKm, beginkiloM;
+          if (detail.beginkilo !== undefined && detail.beginkilo !== null) {
+            beginkiloKm = Math.floor(detail.beginkilo / 1000);
+            beginkiloM = detail.beginkilo % 1000;
+          }
+          const formData = { ...detail, dkiloKm, dkiloM, beginkiloKm, beginkiloM };
           form.setFieldsValue(formData)
           console.log('✅ 洞身素描详情数据:', detail)
           
@@ -169,11 +175,13 @@ function TunnelSketchEditPage() {
       
       // 里程合并：将 dkiloKm 和 dkiloM 合并为 dkilo
       const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
+      // 开始里程合并：将 beginkiloKm 和 beginkiloM 合并为 beginkilo
+      const beginkilo = (values.beginkiloKm || 0) * 1000 + (values.beginkiloM || 0);
       
       // 构建符合API规范的提交数据
       const submitData = {
-        // 基础字段 - PK字段临时设为null（后端修复后恢复）
-        ybPk: null,
+        // 基础字段 - 编辑时使用详情数据中的PK值
+        ybPk: isNew ? 0 : (detailData?.ybPk || 0),
         ybId: detailData?.ybId || 0,
         siteId: siteId || detailData?.siteId || '',
         dkname: values.dkname || '',
@@ -200,10 +208,10 @@ function TunnelSketchEditPage() {
         method: 8, // 洞身素描法
         flag: detailData?.flag || 0,
         submitFlag: detailData?.submitFlag || 0,
-        // 洞身素描特有字段 - PK字段临时设为null
-        dssmPk: null,
+        // 洞身素描特有字段 - 编辑时使用详情数据中的PK值
+        dssmPk: isNew ? 0 : (detailData?.dssmPk || 0),
         dssmId: isNew ? 0 : (detailData?.dssmId || 0),
-        beginkilo: values.beginkilo || 0,
+        beginkilo: beginkilo,
         dssmLength: values.dssmLength || 0,
         sjwydj: values.sjwydj || 0,
         sgwydj: values.sgwydj || 0,
@@ -392,12 +400,12 @@ function TunnelSketchEditPage() {
                   <Col span={8}>
                     <Form.Item label="开始里程值" required>
                       <Space>
-                        <Form.Item field="begindkname" noStyle>
-                          <Input style={{ width: 80 }} placeholder="DK" disabled />
+                        <Form.Item field="beginkiloKm" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber style={{ width: 100 }} placeholder="180" precision={0} min={0} />
                         </Form.Item>
                         <span>+</span>
-                        <Form.Item field="beginkilo" noStyle rules={[{ required: true, message: '请输入开始里程值' }]}>
-                          <InputNumber style={{ width: 100 }} placeholder="0" precision={0} />
+                        <Form.Item field="beginkiloM" noStyle rules={[{ required: true, message: '请输入' }]}>
+                          <InputNumber style={{ width: 100 }} placeholder="972" precision={0} min={0} max={999} />
                         </Form.Item>
                       </Space>
                     </Form.Item>
@@ -654,13 +662,6 @@ function TunnelSketchEditPage() {
                         const gradeMap: Record<number, string> = { 1: 'Ⅰ', 2: 'Ⅱ', 3: 'Ⅲ', 4: 'Ⅳ', 5: 'Ⅴ', 6: 'Ⅵ' }
                         return gradeMap[val] || val
                       }
-                    },
-                    { 
-                      title: 'BQ值范围', 
-                      dataIndex: 'bqRange', 
-                      width: 100,
-                      align: 'center' as const,
-                      render: () => '-'
                     },
                     { 
                       title: '预报动态', 

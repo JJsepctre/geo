@@ -75,8 +75,8 @@ function LoginPage() {
       })
 
       // response已经是BaseResponse<LoginResponse>类型
-      // 注意：后端成功状态码是 0，不是 200
-      if (response.resultcode === 0 && response.data) {
+      // 注意：后端成功状态码可能是 0 或 200
+      if ((response.resultcode === 0 || response.resultcode === 200) && response.data) {
         // 打印后端返回的完整数据，用于调试
         console.log('📦 [Login] 后端返回的完整数据:', response.data)
         

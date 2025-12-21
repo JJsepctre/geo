@@ -68,6 +68,17 @@ function SurfaceSupplementEditPage() {
         }
         
         const detail = await apiAdapter.getSurfaceSupplementInfo(id)
+        console.log('🔍 [地表补充] 详情API响应:', detail)
+        console.log('🔍 [地表补充] 详情数据的所有字段:', detail ? Object.keys(detail) : 'null')
+        console.log('🔍 [地表补充] 关键ID字段:', {
+          ybPk: detail?.ybPk,
+          ybId: detail?.ybId,
+          dbbcPk: detail?.dbbcPk,
+          dbbcId: detail?.dbbcId,
+          ybLength: detail?.ybLength,
+          createdate: detail?.createdate
+        })
+        
         if (detail) {
           setDetailData(detail)
           // 里程拆分：将 dkilo 拆分为 dkiloKm 和 dkiloM
@@ -76,9 +87,16 @@ function SurfaceSupplementEditPage() {
             dkiloKm = Math.floor(detail.dkilo / 1000);
             dkiloM = detail.dkilo % 1000;
           }
-          const formData = { ...detail, dkiloKm, dkiloM };
+          // 开始里程拆分：将 beginkilo 拆分为 beginkiloStart 和 beginkiloEnd
+          let beginkiloStart, beginkiloEnd;
+          if (detail.beginkilo !== undefined && detail.beginkilo !== null) {
+            beginkiloStart = Math.floor(detail.beginkilo / 1000);
+            beginkiloEnd = detail.beginkilo % 1000;
+          }
+          const formData = { ...detail, dkiloKm, dkiloM, beginkiloStart, beginkiloEnd };
           form.setFieldsValue(formData)
           console.log('✅ 地表补充详情数据:', detail)
+          console.log('✅ 表单数据:', formData)
           
           if (detail.ybjgVOList && Array.isArray(detail.ybjgVOList)) {
             setSegmentList(detail.ybjgVOList)
@@ -114,30 +132,53 @@ function SurfaceSupplementEditPage() {
       
       // 里程合并：将 dkiloKm 和 dkiloM 合并为 dkilo
       const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
+      // 开始里程合并：将 beginkiloStart 和 beginkiloEnd 合并为 beginkilo
+      const beginkilo = (values.beginkiloStart || 0) * 1000 + (values.beginkiloEnd || 0);
+      
+      // 清理原始数据中的列表字段，避免覆盖用户修改的数据
+      const cleanDetailData = { ...detailData }
+      delete cleanDetailData.ybjgVOList
+      delete cleanDetailData.ybjgDTOList
       
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
       const submitData = {
-        ...detailData,    // 先用原始数据
+        ...cleanDetailData,    // 先用清理后的原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
         dkilo,            // 使用合并后的里程值
+        beginkilo,        // 使用合并后的开始里程值
         dbbcPk: isNew ? null : detailData?.dbbcPk,  // 编辑模式保留原始ID
+        dbbcId: isNew ? null : detailData?.dbbcId,  // 编辑模式保留原始ID
+        ybPk: isNew ? null : detailData?.ybPk,      // 编辑模式保留原始ID
+        ybId: isNew ? null : detailData?.ybId,      // 编辑模式保留原始ID
         siteId: siteId || detailData?.siteId,
         method: 12,       // 地表补充的method为12
-        ybjgDTOList: segmentList.map(item => ({
-          ybjgPk: isNew ? null : (item.ybjgPk || null),  // 编辑模式保留原始ID
-          ybPk: isNew ? null : (item.ybPk || detailData?.dbbcPk || null),  // 编辑模式保留原始ID
-          dkname: item.dkname,
-          sdkilo: item.sdkilo,
-          edkilo: item.edkilo,
-          ybjgTime: item.ybjgTime,
-          risklevel: item.risklevel,
-          wylevel: item.wylevel,
-          grade: item.grade,
-          jlresult: item.jlresult
-        }))
+        // 分段信息列表 - 新增时不发送pk/id字段
+        ybjgDTOList: segmentList.map(item => {
+          const baseData: any = {
+            dkname: item.dkname || 'DK',
+            sdkilo: item.sdkilo,
+            sdkiloEnd: item.sdkiloEnd,
+            edkilo: item.edkilo,
+            edkiloEnd: item.edkiloEnd,
+            ybjgTime: item.ybjgTime,
+            risklevel: item.risklevel || '',
+            wylevel: item.wylevel,
+            grade: item.grade,
+            dzjb: item.dzjb,
+            jlresult: item.jlresult || ''
+          };
+          // 只有编辑已有记录时才发送pk/id字段
+          if (item.ybjgPk) {
+            baseData.ybjgPk = item.ybjgPk;
+            baseData.ybjgId = item.ybjgId || item.ybjgPk;
+            baseData.ybPk = item.ybPk;
+          }
+          return baseData;
+        })
       }
       
       console.log('📤 [地表补充] 提交数据:', submitData, '是否新增:', isNew)
+      console.log('📤 [地表补充] 使用的ID:', id, 'ybPk:', detailData?.ybPk, 'dbbcPk:', detailData?.dbbcPk)
       
       let result
       if (isNew) {
@@ -184,11 +225,13 @@ function SurfaceSupplementEditPage() {
       setSegmentList(updatedList)
       Message.success('分段信息更新成功')
     } else {
-      // 新增记录
+      // 新增记录 - PK字段设为null，后端会自动生成
       const newSegment = {
         ...data,
-        ybjgPk: Date.now(), // 临时ID
-        ybPk: id
+        ybjgPk: null,
+        ybjgId: null,
+        ybPk: null,
+        _tempId: Date.now() // 仅用于前端列表的 rowKey
       }
       setSegmentList([...segmentList, newSegment])
       Message.success('分段信息添加成功')

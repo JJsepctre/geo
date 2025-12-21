@@ -81,6 +81,17 @@ function PalmSketchEditPage() {
     const fetchDetail = async () => {
       if (!id) return
       
+      // 新增模式：设置默认值
+      if (id === 'new') {
+        form.setFieldsValue({
+          dkname: 'D1K',
+          zzmsmType: 1, // 默认岩体
+          method: 7,
+        })
+        setLoading(false)
+        return
+      }
+      
       setLoading(true)
       try {
         // 尝试从路由状态获取
@@ -142,17 +153,38 @@ function PalmSketchEditPage() {
       const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
       
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
-      const submitData = {
+      const submitData: any = {
         ...originalData,  // 先用原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
         dkilo,            // 使用合并后的里程值
-        ybPk: null,       // 临时设置为null，后端修复后改回
         siteId: siteId || originalData?.siteId,
         method: 7,        // 掌子面素描的method为7
+        zzmsmType: values.zzmsmType || 1, // 确保有默认值（1=岩体）
+        ybjgDTOList: segmentList || [], // 分段信息列表
+      }
+      // 新增时设置主键为0，编辑时保留原值
+      if (isNew) {
+        submitData.ybPk = 0;
+        submitData.ybId = 0;
+        submitData.zzmsmPk = 0;
+        submitData.zzmsmId = 0;
+        submitData.flag = 0;
+        submitData.submitFlag = 0;
+        submitData.ybLength = 0;
       }
       // 清理临时字段
       delete submitData.dkiloKm;
       delete submitData.dkiloM;
+      
+      // 掌子面素描时间格式转换为 ISO 格式
+      if (submitData.monitordate) {
+        // 将 "2025-12-13 22:08:14" 转换为 "2025-12-13T22:08:14.000Z"
+        const dateStr = submitData.monitordate.replace(' ', 'T');
+        submitData.monitordate = dateStr.includes('.') ? dateStr : dateStr + '.000Z';
+      }
+      if (isNew) {
+        submitData.createdate = new Date().toISOString();
+      }
       
       console.log('📤 [掌子面素描] 提交数据:', submitData, '是否新增:', isNew)
       
@@ -1055,44 +1087,7 @@ function PalmSketchEditPage() {
                   border
                 />
 
-                {/* 底部搜索过滤区域 */}
-                <div style={{ 
-                  marginTop: 24, 
-                  padding: '16px 20px', 
-                  backgroundColor: '#f7f8fa', 
-                  borderRadius: 4,
-                  border: '1px solid #e5e6eb'
-                }}>
-                  <div style={{ 
-                    fontSize: 14, 
-                    fontWeight: 600, 
-                    marginBottom: 16,
-                    color: '#1d2129'
-                  }}>
-                    下次超前地质预报
-                  </div>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item label="下次超前预报方法" style={{ marginBottom: 0 }}>
-                        <Select placeholder="请选择预报方法" style={{ width: '100%' }}>
-                          <Select.Option value="1">地震波反射</Select.Option>
-                          <Select.Option value="2">水平声波剖面</Select.Option>
-                          <Select.Option value="3">陆地声呐</Select.Option>
-                          <Select.Option value="4">电磁波反射</Select.Option>
-                          <Select.Option value="5">高分辨直流电</Select.Option>
-                          <Select.Option value="6">瞬变电磁</Select.Option>
-                          <Select.Option value="13">超前水平钻</Select.Option>
-                          <Select.Option value="14">加深炮孔</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item label="预报时间日期" style={{ marginBottom: 0 }}>
-                        <DatePicker style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </div>
+                {/* 下次超前地质预报 - 暂时隐藏 */}
               </div>
             </TabPane>
 

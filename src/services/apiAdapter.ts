@@ -1187,25 +1187,58 @@ class APIAdapter {
   }
 
   // 撤回预报数据（将submitFlag从1改为0）
+  // 先获取完整详情，再只修改 submitFlag 字段
   async withdrawForecast(type: string, id: string, data: any) {
     if (USE_REAL_API) {
-      // 将submitFlag设置为0表示撤回
-      const withdrawData = { ...data, submitFlag: 0 };
-      console.log('🔄 [apiAdapter] withdrawForecast 撤回数据:', { type, id, withdrawData });
+      try {
+        // 先获取完整详情数据
+        let fullData: any = null;
+        const method = data.method;
+        
+        switch (type) {
+          case 'geophysical':
+            fullData = await realAPI.getGeophysicalDetailByMethod(method, id);
+            break;
+          case 'palmSketch':
+            fullData = await realAPI.getFaceSketchDetail(parseInt(id));
+            break;
+          case 'tunnelSketch':
+            fullData = await realAPI.getTunnelSketchDetail(parseInt(id));
+            break;
+          case 'drilling':
+            fullData = await realAPI.getDrillingMethodDetail(parseInt(id), method?.toString());
+            break;
+          case 'surface':
+            fullData = await realAPI.getSurfaceSupplementInfo(id);
+            break;
+        }
+        
+        if (!fullData) {
+          console.error('❌ [apiAdapter] withdrawForecast 获取详情失败');
+          return { success: false, message: '获取详情失败' };
+        }
+        
+        // 只修改 submitFlag 字段
+        const withdrawData = { ...fullData, submitFlag: 0 };
+        console.log('🔄 [apiAdapter] withdrawForecast 撤回数据:', { type, id, submitFlag: 0 });
 
-      switch (type) {
-        case 'geophysical':
-          return realAPI.updateGeophysicalMethod(id, withdrawData, data.method?.toString());
-        case 'palmSketch':
-          return realAPI.updateFaceSketch(id, withdrawData);
-        case 'tunnelSketch':
-          return realAPI.updateTunnelSketch(id, withdrawData);
-        case 'drilling':
-          return realAPI.updateDrillingMethod(id, withdrawData);
-        case 'surface':
-          return realAPI.updateSurfaceSupplement(id, withdrawData);
-        default:
-          return { success: false, message: '不支持的类型' };
+        switch (type) {
+          case 'geophysical':
+            return realAPI.updateGeophysicalMethod(id, withdrawData, method?.toString());
+          case 'palmSketch':
+            return realAPI.updateFaceSketch(id, withdrawData);
+          case 'tunnelSketch':
+            return realAPI.updateTunnelSketch(id, withdrawData);
+          case 'drilling':
+            return realAPI.updateDrillingMethod(id, withdrawData);
+          case 'surface':
+            return realAPI.updateSurfaceSupplement(id, withdrawData);
+          default:
+            return { success: false, message: '不支持的类型' };
+        }
+      } catch (error) {
+        console.error('❌ [apiAdapter] withdrawForecast 异常:', error);
+        return { success: false, message: '撤回失败' };
       }
     } else {
       return { success: true };
@@ -1243,9 +1276,9 @@ class APIAdapter {
     }
   }
 
-  async deleteGeophysical(id: string) {
+  async deleteGeophysical(id: string, method?: number) {
     if (USE_REAL_API) {
-      return realAPI.deleteGeophysicalMethod(id);
+      return realAPI.deleteGeophysicalMethod(id, method);
     } else {
       return { success: true };
     }
@@ -1286,10 +1319,71 @@ class APIAdapter {
     }
   }
 
-  async uploadGeophysical(id: string) {
+  async uploadGeophysical(id: string, data?: any) {
     if (USE_REAL_API) {
-      // 调用上传API，具体实现根据后端接口
-      return realAPI.uploadGeophysicalData(id);
+      // 上传就是将 submitFlag 设置为 1
+      const uploadData = { ...data, submitFlag: 1 };
+      console.log('🔄 [apiAdapter] uploadGeophysical 上传数据:', { id, uploadData });
+      return realAPI.updateGeophysicalMethod(id, uploadData, data?.method?.toString());
+    } else {
+      return { success: true };
+    }
+  }
+
+  // 上传预报数据（将submitFlag从0改为1）
+  // 先获取完整详情，再只修改 submitFlag 字段
+  async uploadForecast(type: string, id: string, data: any) {
+    if (USE_REAL_API) {
+      try {
+        // 先获取完整详情数据
+        let fullData: any = null;
+        const method = data.method;
+        
+        switch (type) {
+          case 'geophysical':
+            fullData = await realAPI.getGeophysicalDetailByMethod(method, id);
+            break;
+          case 'palmSketch':
+            fullData = await realAPI.getFaceSketchDetail(parseInt(id));
+            break;
+          case 'tunnelSketch':
+            fullData = await realAPI.getTunnelSketchDetail(parseInt(id));
+            break;
+          case 'drilling':
+            fullData = await realAPI.getDrillingMethodDetail(parseInt(id), method?.toString());
+            break;
+          case 'surface':
+            fullData = await realAPI.getSurfaceSupplementInfo(id);
+            break;
+        }
+        
+        if (!fullData) {
+          console.error('❌ [apiAdapter] uploadForecast 获取详情失败');
+          return { success: false, message: '获取详情失败' };
+        }
+        
+        // 只修改 submitFlag 字段
+        const uploadData = { ...fullData, submitFlag: 1 };
+        console.log('🔄 [apiAdapter] uploadForecast 上传数据:', { type, id, submitFlag: 1 });
+
+        switch (type) {
+          case 'geophysical':
+            return realAPI.updateGeophysicalMethod(id, uploadData, method?.toString());
+          case 'palmSketch':
+            return realAPI.updateFaceSketch(id, uploadData);
+          case 'tunnelSketch':
+            return realAPI.updateTunnelSketch(id, uploadData);
+          case 'drilling':
+            return realAPI.updateDrillingMethod(id, uploadData);
+          case 'surface':
+            return realAPI.updateSurfaceSupplement(id, uploadData);
+          default:
+            return { success: false, message: '不支持的类型' };
+        }
+      } catch (error) {
+        console.error('❌ [apiAdapter] uploadForecast 异常:', error);
+        return { success: false, message: '上传失败' };
+      }
     } else {
       return { success: true };
     }

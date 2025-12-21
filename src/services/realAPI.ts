@@ -1872,11 +1872,9 @@ class RealAPIService {
         dkilo: dkiloMeters
       });
 
-      // 根据新的SjybDTO结构转换数据
-      // 必填字段: bdPk, dkilo, dkname, method, plannum, qxsl, sdPk, sjybLength, username, zksl, zxms
+      // 根据API入参结构，只需要siteId，不需要bdId
       const requestData = {
-        bdPk: (data as any).bdPk,  // 标段主键（从传入数据获取）
-        sdPk: (data as any).sdPk,  // 隧道主键（从传入数据获取）
+        siteId: String((data as any).siteId || (data as any).sitePk || ''),  // 工点ID
         method: this.getMethodCode(data.method),  // 预报方法
         dkname: this.extractMileagePrefix(data.startMileage),  // 里程冠号
         dkilo: dkiloMeters,  // 起始里程（米数）
@@ -1913,8 +1911,10 @@ class RealAPIService {
       const detail = await this.getDesignForecastDetail(Number(id)).catch(() => null);
       console.log('🔍 [realAPI] updateForecastDesign 获取到的详情:', detail);
 
-      const bdPk = (detail && typeof detail === 'object' && 'bdPk' in detail) ? Number(detail.bdPk) : 1;
-      const sdPk = (detail && typeof detail === 'object' && 'sdPk' in detail) ? Number(detail.sdPk) : 1;
+      // 从详情中获取siteId，或者从传入的data中获取
+      const siteId = (data as any).siteId || 
+                     (detail && typeof detail === 'object' && 'siteId' in detail ? String(detail.siteId) : '') ||
+                     (detail && typeof detail === 'object' && 'sitePk' in detail ? String(detail.sitePk) : '');
       const existZksl = (detail && typeof detail === 'object' && 'zksl' in detail) ? Number(detail.zksl) : undefined;
       const existQxsl = (detail && typeof detail === 'object' && 'qxsl' in detail) ? Number(detail.qxsl) : undefined;
       const existPlannum = (detail && typeof detail === 'object' && 'plannum' in detail) ? Number(detail.plannum) : undefined;
@@ -1931,10 +1931,10 @@ class RealAPIService {
         dkiloMeters
       });
 
-      // 根据新的SjybDTO结构（与创建相同，不需要endMileage）
+      // 根据API入参结构，bdId设为null，siteId从传入的data或详情获取
       const requestData: any = {
-        bdPk: bdPk,
-        sdPk: sdPk,
+        bdId: null,
+        siteId: siteId,  // 从页面传入的siteId
         method: this.getMethodCode(data.method),
         dkname: this.extractMileagePrefix(data.startMileage),
         dkilo: Math.floor(dkiloMeters),  // 起始里程
@@ -2451,7 +2451,7 @@ class RealAPIService {
       // 移除 undefined 和空字符串值
       Object.keys(cleanData).forEach(key => {
         if (cleanData[key] === undefined || cleanData[key] === '') {
-          delete cleanData[key];
+            delete cleanData[key];
         }
       });
       
@@ -2526,8 +2526,16 @@ class RealAPIService {
    */
   async createPalmSketch(data: any): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log('📤 [realAPI] createPalmSketch 请求数据:', data);
-      const response = await post<any>('/api/v1/zzmsm', data);
+      // 清理 undefined 和 null 值，避免后端解析错误
+      const cleanData: any = {};
+      Object.keys(data).forEach(key => {
+        if (data[key] !== undefined && data[key] !== null) {
+          cleanData[key] = data[key];
+        }
+      });
+      
+      console.log('📤 [realAPI] createPalmSketch 请求数据:', cleanData);
+      const response = await post<any>('/api/v1/zzmsm', cleanData);
       console.log('📥 [realAPI] createPalmSketch 响应:', response);
 
       // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
@@ -2549,8 +2557,58 @@ class RealAPIService {
    */
   async createTunnelSketch(data: any): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log('📤 [realAPI] createTunnelSketch 请求数据:', data);
-      const response = await post<any>('/api/v1/dssm', data);
+      console.log('📤 [realAPI] createTunnelSketch 原始数据:', data);
+      
+      // 构建只包含业务数据的请求，不发送 pk/id 字段
+      const safeData = {
+        // 基础预报字段
+        siteId: String(data.siteId || ''),
+        dkname: data.dkname || 'DK',
+        dkilo: data.dkilo !== undefined ? Math.round(Number(data.dkilo)) : 0,
+        ybLength: data.ybLength !== undefined ? Number(data.ybLength) : 0,
+        monitordate: data.monitordate ? 
+          (data.monitordate.includes?.(' ') ? data.monitordate.replace(' ', 'T') : data.monitordate) 
+          : new Date().toISOString(),
+        testname: data.testname || '',
+        testno: data.testno || '',
+        testtel: data.testtel || '',
+        monitorname: data.monitorname || '',
+        monitorno: data.monitorno || '',
+        monitortel: data.monitortel || '',
+        supervisorname: data.supervisorname || '',
+        supervisorno: data.supervisorno || '',
+        supervisortel: data.supervisortel || '',
+        conclusionyb: data.conclusionyb || '',
+        suggestion: data.suggestion || '',
+        solution: data.solution || '',
+        remark: data.remark || '',
+        method: 8, // 洞身素描
+        flag: data.flag !== undefined ? Number(data.flag) : 0,
+        submitFlag: data.submitFlag !== undefined ? Number(data.submitFlag) : 0,
+        // 洞身素描特有字段
+        beginkilo: data.beginkilo !== undefined ? Math.round(Number(data.beginkilo)) : 0,
+        dssmLength: data.dssmLength !== undefined ? Number(data.dssmLength) : 0,
+        sjwydj: data.sjwydj !== undefined ? Number(data.sjwydj) : 0,
+        sgwydj: data.sgwydj !== undefined ? Number(data.sgwydj) : 0,
+        sjdzms: data.sjdzms || '',
+        sgdztz: data.sgdztz || '',
+        sggztz: data.sggztz || '',
+        shswtz: data.shswtz || '',
+        // 分段信息列表（只发送业务数据）
+        ybjgDTOList: (data.ybjgDTOList || []).map((item: any) => ({
+          dkname: item.dkname || 'DK',
+          sdkilo: item.sdkilo !== undefined ? Math.round(Number(item.sdkilo)) : 0,
+          edkilo: item.edkilo !== undefined ? Math.round(Number(item.edkilo)) : 0,
+          ybjgTime: item.ybjgTime,
+          risklevel: item.risklevel || '',
+          grade: item.grade !== undefined ? Number(item.grade) : 0,
+          wylevel: item.wylevel !== undefined ? Number(item.wylevel) : 0,
+          jlresult: item.jlresult || '',
+        })),
+      };
+      
+      console.log('📤 [realAPI] createTunnelSketch 清理后数据:', safeData);
+      const response = await post<any>('/api/v1/dssm', safeData);
       console.log('📥 [realAPI] createTunnelSketch 响应:', response);
 
       // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
@@ -2582,7 +2640,113 @@ class RealAPIService {
         apiPath = '/api/v1/ztf/jspk';
       }
 
-      const response = await post<any>(apiPath, data);
+      // 构建钻孔列表（超前水平钻）- 只发送业务数据
+      const cqspzZkzzDTOList = (data.cqspzZkzzDTOList || data.zkList || []).map((item: any) => {
+        // 构建钻孔记录列表
+        const ztjlbList = (item.cqspzZkzzZtjlbDTOList || item.cqspzZkzzZtjlbVOList || []).map((record: any) => ({
+          kssj: record.kssj ? (record.kssj.includes?.(' ') ? record.kssj.replace(' ', 'T') : record.kssj) : undefined,
+          jssj: record.jssj ? (record.jssj.includes?.(' ') ? record.jssj.replace(' ', 'T') : record.jssj) : undefined,
+          zksd: record.zksd !== undefined ? Number(record.zksd) : 0,
+          zkpressure: record.zkpressure !== undefined ? Number(record.zkpressure) : 0,
+          zkspeed: record.zkspeed !== undefined ? Number(record.zkspeed) : 0,
+          kwwaterpre: record.kwwaterpre !== undefined ? Number(record.kwwaterpre) : 0,
+          kwwaterspe: record.kwwaterspe !== undefined ? Number(record.kwwaterspe) : 0,
+          dzms: record.dzms || '',
+          kwzbxl: record.kwzbxl || '',
+        }));
+
+        // 构建地层信息列表 - 数值字段保留2位小数
+        const dcxxList = (item.cqspzZkzzDcxxDTOList || item.cqspzZkzzDcxxVOList || []).map((info: any) => ({
+          dcdh: info.dcdh !== undefined && info.dcdh !== null ? Number(info.dcdh) : null,
+          dclc: info.dclc !== undefined ? parseFloat(Number(info.dclc).toFixed(2)) : 0.00,
+          fchd: info.fchd !== undefined ? parseFloat(Number(info.fchd).toFixed(2)) : 0.00,
+          cslcz: info.cslcz !== undefined ? parseFloat(Number(info.cslcz).toFixed(2)) : 0.00,
+          csl: info.csl !== undefined ? parseFloat(Number(info.csl).toFixed(2)) : 0.00,
+          cywz: info.cywz || '',
+          gcdzjj: info.gcdzjj || '',
+        }));
+
+        return {
+          kwbh: item.kwbh || '',
+          jgdjl: item.jgdjl !== undefined ? Number(item.jgdjl) : 0,
+          jzxxjl: item.jzxxjl !== undefined ? Number(item.jzxxjl) : 0,
+          kwljangle: item.kwljangle !== undefined ? Number(item.kwljangle) : 0,
+          kwpjangle: item.kwpjangle !== undefined ? Number(item.kwpjangle) : 0,
+          zkzj: item.zkzj !== undefined ? Number(item.zkzj) : 0,
+          zjcode: item.zjcode || '',
+          kssj: item.kssj ? (item.kssj.includes?.(' ') ? item.kssj.replace(' ', 'T') : item.kssj) : undefined,
+          jssj: item.jssj ? (item.jssj.includes?.(' ') ? item.jssj.replace(' ', 'T') : item.jssj) : undefined,
+          // kkwzsyt 和 qxpic 是图片字段，需通过单独接口上传
+          sfqx: item.sfqx !== undefined ? Number(item.sfqx) : 0,
+          remark: item.remark || '',
+          cqspzZkzzZtjlbDTOList: ztjlbList,
+          cqspzZkzzDcxxDTOList: dcxxList,
+        };
+      });
+
+      // 构建提交数据 - 只发送业务数据（不含 pk/id 和图片字段）
+      const submitData = {
+        // 基础预报字段
+        siteId: String(data.siteId || ''),
+        dkname: data.dkname || 'DK',
+        dkilo: data.dkilo !== undefined ? Math.round(Number(data.dkilo)) : 0,
+        ybLength: data.ybLength !== undefined ? Number(data.ybLength) : 0,
+        monitordate: data.monitordate
+          ? data.monitordate.includes?.(' ')
+            ? data.monitordate.replace(' ', 'T')
+            : data.monitordate
+          : new Date().toISOString(),
+        testname: data.testname || '',
+        testno: data.testno || '',
+        testtel: data.testtel || '',
+        monitorname: data.monitorname || '',
+        monitorno: data.monitorno || '',
+        monitortel: data.monitortel || '',
+        supervisorname: data.supervisorname || '',
+        supervisorno: data.supervisorno || '',
+        supervisortel: data.supervisortel || '',
+        conclusionyb: data.conclusionyb || '',
+        suggestion: data.suggestion || '',
+        solution: data.solution || '',
+        remark: data.remark || '',
+        method: method,
+        flag: data.flag !== undefined ? Number(data.flag) : 0,
+        submitFlag: data.submitFlag !== undefined ? Number(data.submitFlag) : 0,
+        // 超前水平钻特有字段（不含图片字段，图片需通过单独接口上传）
+        kwtype: data.kwtype !== undefined ? Number(data.kwtype) : 1,
+        // 分段信息列表
+        // dzjb 转 grade 的映射：green=0(绿色), yellow=2(黄色), red=1(红色)
+        ybjgDTOList: (data.ybjgDTOList || []).map((item: any) => {
+          const dzjbToGradeMap: Record<string, number> = { 'green': 0, 'yellow': 2, 'red': 1 };
+          const gradeValue = item.grade !== undefined ? Number(item.grade) : (item.dzjb ? dzjbToGradeMap[item.dzjb] ?? 0 : 0);
+          // 处理里程合并：sdkilo + sdkiloEnd, edkilo + edkiloEnd
+          let finalSdkilo = item.sdkilo;
+          if (item.sdkiloEnd !== undefined && item.sdkiloEnd !== null) {
+            finalSdkilo = (Number(item.sdkilo) || 0) * 1000 + (Number(item.sdkiloEnd) || 0);
+          }
+          let finalEdkilo = item.edkilo;
+          if (item.edkiloEnd !== undefined && item.edkiloEnd !== null) {
+            finalEdkilo = (Number(item.edkilo) || 0) * 1000 + (Number(item.edkiloEnd) || 0);
+          }
+          // 处理时间格式：空格转T，格式为 "2025-12-13T22:12:34"
+          const ybjgTimeFormatted = item.ybjgTime ? String(item.ybjgTime).replace(' ', 'T') : undefined;
+          return {
+            dkname: item.dkname || 'DK',
+            sdkilo: finalSdkilo !== undefined ? Math.round(Number(finalSdkilo)) : 0,
+            edkilo: finalEdkilo !== undefined ? Math.round(Number(finalEdkilo)) : 0,
+            ybjgTime: ybjgTimeFormatted,
+            risklevel: item.risklevel || '',
+            grade: gradeValue,
+            wylevel: item.wylevel !== undefined ? Number(item.wylevel) : 0,
+            jlresult: item.jlresult || '',
+          };
+        }),
+        // 钻孔列表
+        cqspzZkzzDTOList: method === 13 ? cqspzZkzzDTOList : undefined,
+      };
+
+      console.log('📤 [realAPI] createDrilling 清理后数据:', submitData);
+      const response = await post<any>(apiPath, submitData);
       console.log('📥 [realAPI] createDrilling 响应:', response);
 
       // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
@@ -2604,12 +2768,102 @@ class RealAPIService {
    */
   async createSurfaceSupplement(data: any): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log('📤 [realAPI] createSurfaceSupplement 请求数据:', data);
-      const response = await post<any>('/api/v1/dbbc', data);
+      console.log('📤 [realAPI] createSurfaceSupplement 原始数据:', data);
+      
+      // dzjb 转 grade 的映射：green=0(绿色), yellow=2(黄色), red=1(红色)
+      const dzjbToGrade = (dzjb: string): number => {
+        const map: Record<string, number> = { 'green': 0, 'yellow': 2, 'red': 1 };
+        return map[dzjb] ?? 0;
+      };
+      
+      // 处理里程值
+      let dkilo = data.dkilo;
+      if (data.dkiloKm !== undefined || data.dkiloM !== undefined) {
+        dkilo = (Number(data.dkiloKm) || 0) * 1000 + (Number(data.dkiloM) || 0);
+      }
+      
+      // 处理起始里程
+      let beginkilo = data.beginkilo;
+      if (data.beginkiloStart !== undefined || data.beginkiloEnd !== undefined) {
+        beginkilo = (Number(data.beginkiloStart) || 0) * 1000 + (Number(data.beginkiloEnd) || 0);
+      }
+      
+      // 构建 ybjgDTOList - 新增时不发送pk/id字段
+      const ybjgDTOList = (data.ybjgDTOList || []).map((item: any) => {
+        let finalSdkilo = item.sdkilo;
+        if (item.sdkiloEnd !== undefined && item.sdkiloEnd !== null) {
+          finalSdkilo = (Number(item.sdkilo) || 0) * 1000 + (Number(item.sdkiloEnd) || 0);
+        }
+        let finalEdkilo = item.edkilo;
+        if (item.edkiloEnd !== undefined && item.edkiloEnd !== null) {
+          finalEdkilo = (Number(item.edkilo) || 0) * 1000 + (Number(item.edkiloEnd) || 0);
+        }
+        const gradeValue = item.grade !== undefined ? Number(item.grade) : (item.dzjb ? dzjbToGrade(item.dzjb) : 0);
+        return {
+          dkname: item.dkname || 'DK',
+          sdkilo: finalSdkilo !== undefined ? Math.round(Number(finalSdkilo)) : 0,
+          edkilo: finalEdkilo !== undefined ? Math.round(Number(finalEdkilo)) : 0,
+          ybjgTime: item.ybjgTime ? (String(item.ybjgTime).includes(' ') ? String(item.ybjgTime).replace(' ', 'T') : item.ybjgTime) : undefined,
+          risklevel: item.risklevel || '',
+          grade: gradeValue,
+          wylevel: item.wylevel !== undefined ? Number(item.wylevel) : 0,
+          jlresult: item.jlresult || '',
+        };
+      });
+      
+      // 构建提交数据 - 新增时不发送pk/id字段
+      // 生成 createdate - 如果没有则使用当前时间，格式：YYYY-MM-DDTHH:mm:ss
+      let createdate = data.createdate;
+      if (!createdate) {
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        createdate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      } else if (String(createdate).includes(' ')) {
+        createdate = String(createdate).replace(' ', 'T');
+      }
+      
+      const submitData = {
+        siteId: String(data.siteId || ''),
+        dkname: data.dkname || 'DK',
+        dkilo: dkilo !== undefined ? Math.round(Number(dkilo)) : 0,
+        ybLength: data.ybLength !== undefined ? Number(data.ybLength) : 0,
+        monitordate: data.monitordate ? (String(data.monitordate).includes(' ') ? String(data.monitordate).replace(' ', 'T') : data.monitordate) : undefined,
+        createdate: createdate,
+        testname: data.testname || '',
+        testno: data.testno || '',
+        testtel: data.testtel || '',
+        monitorname: data.monitorname || '',
+        monitorno: data.monitorno || '',
+        monitortel: data.monitortel || '',
+        supervisorname: data.supervisorname || '',
+        supervisorno: data.supervisorno || '',
+        supervisortel: data.supervisortel || '',
+        conclusionyb: data.conclusionyb || '',
+        suggestion: data.suggestion || '',
+        solution: data.solution || '',
+        remark: data.remark || '',
+        method: 12, // 地表补充的method为12
+        flag: data.flag !== undefined ? Number(data.flag) : 0,
+        submitFlag: data.submitFlag !== undefined ? Number(data.submitFlag) : 0,
+        // 地表补充特有字段
+        beginkilo: beginkilo !== undefined ? Number(beginkilo) : undefined,
+        dbbcLength: data.dbbcLength !== undefined ? Number(data.dbbcLength) : 0,
+        sjwydj: data.sjwydj !== undefined ? Number(data.sjwydj) : 0,
+        sjqk: data.sjqk !== undefined ? Number(data.sjqk) : 0,
+        dcyx: data.dcyx || '',
+        dbry: data.dbry || '',
+        tsdz: data.tsdz || '',
+        rwdk: data.rwdk || '',
+        dzpj: data.dzpj || '',
+        ybjgDTOList: ybjgDTOList,
+      };
+      
+      console.log('📤 [realAPI] createSurfaceSupplement 清理后数据:', submitData);
+      const response = await post<any>('/api/v1/dbbc', submitData);
       console.log('📥 [realAPI] createSurfaceSupplement 响应:', response);
 
       // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
-      if (typeof response === 'number' || (response && response.resultcode === 200)) {
+      if (typeof response === 'number' || (response && (response.resultcode === 200 || response.resultcode === 0))) {
         console.log('✅ [realAPI] createSurfaceSupplement 成功');
         return { success: true };
       } else {
@@ -2698,7 +2952,7 @@ class RealAPIService {
       if (cleanData.tspPddataVOList && cleanData.tspPddataVOList.length > 0 && (!cleanData.tspPddataDTOList || cleanData.tspPddataDTOList.length === 0)) {
         cleanData.tspPddataDTOList = cleanData.tspPddataVOList;
       }
-      delete cleanData.tspPddataVOList;
+        delete cleanData.tspPddataVOList;
 
       // LDSN测点列表：只有当 DTOList 不存在或为空时，才用 VOList 覆盖
       if (cleanData.ldsnResultinfoVOList && cleanData.ldsnResultinfoVOList.length > 0 && (!cleanData.ldsnResultinfoDTOList || cleanData.ldsnResultinfoDTOList.length === 0)) {
@@ -2752,6 +3006,7 @@ class RealAPIService {
         tspBxdataDTOList: cleanData.tspBxdataDTOList || cleanData.tspBxdataVOList || [],
         ldsnResultinfoDTOList: cleanData.ldsnResultinfoDTOList || cleanData.ldsnResultinfoVOList || [],
         dcbfsResultinfoDTOList: cleanData.dcbfsResultinfoDTOList || cleanData.dcbfsResultinfoVOList || [],
+        gfbzldResultinfoDTOList: cleanData.gfbzldResultinfoDTOList || cleanData.gfbzldResultinfoVOList || [],
       };
 
       console.log('📋 [realAPI] 保存的列表数据:', {
@@ -2760,6 +3015,7 @@ class RealAPIService {
         tspBxdataDTOList: savedLists.tspBxdataDTOList.length,
         ldsnResultinfoDTOList: savedLists.ldsnResultinfoDTOList.length,
         dcbfsResultinfoDTOList: savedLists.dcbfsResultinfoDTOList.length,
+        gfbzldResultinfoDTOList: savedLists.gfbzldResultinfoDTOList.length,
       });
 
       // 移除子列表字段（避免重复）
@@ -2775,13 +3031,18 @@ class RealAPIService {
       delete cleanData.dcbfsResultinfoVOList;
       delete cleanData.dcbfsResultpicDTOList;
       delete cleanData.dcbfsResultpicVOList;
+      delete cleanData.gfbzldResultinfoDTOList;
+      delete cleanData.gfbzldResultinfoVOList;
 
-      // 注意：pic1/pic2 是 HSP 需要的字段，不要删除
-      // 只删除可能导致问题的其他图片字段
+      // 所有图片字段都需要通过单独的文件上传接口处理，不在 PUT 接口中传递
+      delete cleanData.pic1;
+      delete cleanData.pic2;
       delete cleanData.pic3;
       delete cleanData.pic4;
       delete cleanData.pic5;
       delete cleanData.pic6;
+      delete cleanData.gcxtpic;
+      delete cleanData.originalfile;
 
       // 根据不同的 method 构建不同的数据结构
       const methodNum = Number(cleanData.method);
@@ -2876,9 +3137,11 @@ class RealAPIService {
         }));
 
         // 严格按照LdsnDTO文档构建数据
-        // 注意：ldsnId 必须使用从详情API返回的值，不能设为0
+        // 注意：ldsnId/ldsnPk 如果为0则不传，让后端自己处理
         const ldsnPkVal = Number(cleanData.ldsnPk) || 0;
-        const ldsnIdVal = Number(cleanData.ldsnId) || ldsnPkVal; // 如果ldsnId为0或undefined，使用ldsnPk
+        const ldsnIdVal = Number(cleanData.ldsnId) || 0;
+        console.log('🔍 [realAPI] LDSN ID计算 - cleanData.ldsnPk:', cleanData.ldsnPk, 'cleanData.ldsnId:', cleanData.ldsnId);
+        console.log('🔍 [realAPI] LDSN ID计算结果 - ldsnPkVal:', ldsnPkVal, 'ldsnIdVal:', ldsnIdVal);
         
         safeData = {
           ybPk: Number(cleanData.ybPk) || 0,
@@ -2890,31 +3153,31 @@ class RealAPIService {
           monitordate: cleanData.monitordate ? 
             (cleanData.monitordate.includes(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate) 
             : undefined,
-          testname: cleanData.testname || '',
+        testname: cleanData.testname || '',
           testno: cleanData.testno || '',
           testtel: cleanData.testtel || '',
-          monitorname: cleanData.monitorname || '',
+        monitorname: cleanData.monitorname || '',
           monitorno: cleanData.monitorno || '',
           monitortel: cleanData.monitortel || '',
-          supervisorname: cleanData.supervisorname || '',
+        supervisorname: cleanData.supervisorname || '',
           supervisorno: cleanData.supervisorno || '',
           supervisortel: cleanData.supervisortel || '',
-          conclusionyb: cleanData.conclusionyb || '',
-          suggestion: cleanData.suggestion || '',
+        conclusionyb: cleanData.conclusionyb || '',
+        suggestion: cleanData.suggestion || '',
           solution: cleanData.solution || '',
           remark: cleanData.remark || '',
           method: 3,
           flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
           submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
           ybjgDTOList: cleanedYbjgList,
-          // LDSN 特有字段
-          ldsnPk: ldsnPkVal,
-          ldsnId: ldsnIdVal,
+          // LDSN 特有字段 - 只有非0时才传
+          ...(ldsnPkVal ? { ldsnPk: ldsnPkVal } : {}),
+          ...(ldsnIdVal ? { ldsnId: ldsnIdVal } : {}),
           cxnum: cleanData.cxnum !== undefined ? Number(cleanData.cxnum) : 0,
           sbName: cleanData.sbName || '',
           ldsnResultinfoDTOList: ldsnResultinfoDTOList,
         };
-        console.log('🔍 [realAPI] LDSN 更新 - ldsnPk:', ldsnPkVal, 'ldsnId:', ldsnIdVal);
+        console.log('🔍 [realAPI] LDSN 更新 - ldsnPk:', ldsnPkVal, 'ldsnId:', ldsnIdVal, '(0则不传)');
         console.log('🔍 [realAPI] LDSN 更新 - safeData:', safeData);
       } else if (methodNum === 4) {
         // DCBFS (电磁波反射) - 严格按照API文档构建数据
@@ -2968,9 +3231,9 @@ class RealAPIService {
         });
 
         // 严格按照DcbfsDTO文档构建数据
-        // 注意：dcbfsId 必须使用从详情API返回的值，不能设为0
+        // 注意：dcbfsId/dcbfsPk 如果为0则不传，让后端自己处理
         const dcbfsPkVal = Number(cleanData.dcbfsPk) || 0;
-        const dcbfsIdVal = Number(cleanData.dcbfsId) || dcbfsPkVal; // 如果dcbfsId为0或undefined，使用dcbfsPk
+        const dcbfsIdVal = Number(cleanData.dcbfsId) || 0;
         
         safeData = {
           ybPk: Number(cleanData.ybPk) || 0,
@@ -2996,22 +3259,23 @@ class RealAPIService {
           solution: cleanData.solution || '',
           remark: cleanData.remark || '',
           method: 4,
-          flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
-          submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
+        flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
+        submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
           ybjgDTOList: cleanedYbjgList,
-          // DCBFS 特有字段
-          dcbfsPk: dcbfsPkVal,
-          dcbfsId: dcbfsIdVal,
+          // DCBFS 特有字段 - 只有非0时才传
+          ...(dcbfsPkVal ? { dcbfsPk: dcbfsPkVal } : {}),
+          ...(dcbfsIdVal ? { dcbfsId: dcbfsIdVal } : {}),
           cxnum: cleanData.cxnum !== undefined ? Number(cleanData.cxnum) : 0,
           sbName: cleanData.sbName || '',
           gzpl: cleanData.gzpl !== undefined ? Number(cleanData.gzpl) : 0,
           dcbfsResultinfoDTOList: dcbfsResultinfoDTOList,
         };
-        console.log('🔍 [realAPI] DCBFS 更新 - dcbfsPk:', dcbfsPkVal, 'dcbfsId:', dcbfsIdVal);
+        console.log('🔍 [realAPI] DCBFS 更新 - dcbfsPk:', dcbfsPkVal, 'dcbfsId:', dcbfsIdVal, '(0则不传)');
         console.log('🔍 [realAPI] DCBFS 更新 - safeData:', safeData);
       } else if (methodNum === 5) {
         // GFBZLD (高分辨直流电) - 严格按照API文档构建数据
         console.log('🔍 [realAPI] GFBZLD 更新 - cleanData:', cleanData);
+        console.log('🔍 [realAPI] GFBZLD 更新 - savedLists.gfbzldResultinfoDTOList:', savedLists.gfbzldResultinfoDTOList);
         
         // 构建 ybjgDTOList
         const cleanedYbjgList = (savedLists.ybjgDTOList || []).map((item: any) => {
@@ -3039,8 +3303,19 @@ class RealAPIService {
           };
         });
 
+        // 构建 gfbzldResultinfoDTOList - 电极距掌子面距离列表
+        const gfbzldResultinfoDTOList = (savedLists.gfbzldResultinfoDTOList || []).map((item: any) => ({
+          gfbzldResultinfoPk: item.gfbzldResultinfoPk || null,
+          gfbzldResultinfoId: item.gfbzldResultinfoId || null,
+          gfbzldPk: item.gfbzldPk || cleanData.gfbzldPk || null,
+          djxh: item.djxh || '',
+          gfbzldResultinfoType: item.gfbzldResultinfoType !== undefined ? Number(item.gfbzldResultinfoType) : 1,
+          jzzmjl: item.jzzmjl !== undefined ? Number(item.jzzmjl) : 0,
+        }));
+
+        // gfbzldPk/gfbzldId 如果为0则不传，让后端自己处理
         const gfbzldPkVal = Number(cleanData.gfbzldPk) || 0;
-        const gfbzldIdVal = Number(cleanData.gfbzldId) || gfbzldPkVal;
+        const gfbzldIdVal = Number(cleanData.gfbzldId) || 0;
 
         safeData = {
           ybPk: Number(cleanData.ybPk) || 0,
@@ -3069,16 +3344,18 @@ class RealAPIService {
           flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
           submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
           ybjgDTOList: cleanedYbjgList,
-          // GFBZLD 特有字段
-          gfbzldPk: gfbzldPkVal,
-          gfbzldId: gfbzldIdVal,
+          // GFBZLD 特有字段 - 只有非0时才传
+          ...(gfbzldPkVal ? { gfbzldPk: gfbzldPkVal } : {}),
+          ...(gfbzldIdVal ? { gfbzldId: gfbzldIdVal } : {}),
           gddjnum: cleanData.gddjnum !== undefined ? Number(cleanData.gddjnum) : 0,
           cldjnum: cleanData.cldjnum !== undefined ? Number(cleanData.cldjnum) : 0,
           sbName: cleanData.sbName || '',
           gddy: cleanData.gddy !== undefined ? Number(cleanData.gddy) : 0,
           gddl: cleanData.gddl !== undefined ? Number(cleanData.gddl) : 0,
+          gfbzldResultinfoDTOList: gfbzldResultinfoDTOList, // 电极距掌子面距离列表
         };
-        console.log('🔍 [realAPI] GFBZLD 更新 - gfbzldPk:', gfbzldPkVal, 'gfbzldId:', gfbzldIdVal);
+        console.log('🔍 [realAPI] GFBZLD 更新 - gfbzldPk:', gfbzldPkVal, 'gfbzldId:', gfbzldIdVal, '(0则不传)');
+        console.log('🔍 [realAPI] GFBZLD 更新 - gfbzldResultinfoDTOList:', gfbzldResultinfoDTOList);
         console.log('🔍 [realAPI] GFBZLD 更新 - safeData:', safeData);
       } else if (methodNum === 6) {
         // SBDC (瞬变电磁) - 严格按照API文档构建数据
@@ -3112,8 +3389,9 @@ class RealAPIService {
           };
         });
 
+        // sbdcPk/sbdcId 如果为0则不传，让后端自己处理
         const sbdcPkVal = Number(cleanData.sbdcPk) || 0;
-        const sbdcIdVal = Number(cleanData.sbdcId) || sbdcPkVal;
+        const sbdcIdVal = Number(cleanData.sbdcId) || 0;
 
         safeData = {
           ybPk: Number(cleanData.ybPk) || 0,
@@ -3122,9 +3400,9 @@ class RealAPIService {
           dkname: cleanData.dkname || 'DK',
           dkilo: cleanData.dkilo !== undefined ? Math.round(Number(cleanData.dkilo)) : 0,
           ybLength: cleanData.ybLength !== undefined ? Number(cleanData.ybLength) : 0,
-          monitordate: cleanData.monitordate ? 
-            (cleanData.monitordate.includes(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate) 
-            : undefined,
+        monitordate: cleanData.monitordate ?
+          (cleanData.monitordate.includes(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate)
+          : undefined,
           testname: cleanData.testname || '',
           testno: cleanData.testno || '',
           testtel: cleanData.testtel || '',
@@ -3142,9 +3420,9 @@ class RealAPIService {
           flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
           submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
           ybjgDTOList: cleanedYbjgList,
-          // SBDC 特有字段
-          sbdcPk: sbdcPkVal,
-          sbdcId: sbdcIdVal,
+          // SBDC 特有字段 - 只有非0时才传
+          ...(sbdcPkVal ? { sbdcPk: sbdcPkVal } : {}),
+          ...(sbdcIdVal ? { sbdcId: sbdcIdVal } : {}),
           sbdcType: cleanData.sbdcType !== undefined ? Number(cleanData.sbdcType) : 1,
           fskwzlc: cleanData.fskwzlc !== undefined ? Number(cleanData.fskwzlc) : 0,
           fskc: cleanData.fskc !== undefined ? Number(cleanData.fskc) : 0,
@@ -3162,7 +3440,7 @@ class RealAPIService {
           mqfw: cleanData.mqfw !== undefined ? Number(cleanData.mqfw) : 0,
           cxbzms: cleanData.cxbzms || '',
         };
-        console.log('🔍 [realAPI] SBDC 更新 - sbdcPk:', sbdcPkVal, 'sbdcId:', sbdcIdVal);
+        console.log('🔍 [realAPI] SBDC 更新 - sbdcPk:', sbdcPkVal, 'sbdcId:', sbdcIdVal, '(0则不传)');
         console.log('🔍 [realAPI] SBDC 更新 - cleanedYbjgList:', cleanedYbjgList);
         console.log('🔍 [realAPI] SBDC 更新 - cleanedYbjgList 长度:', cleanedYbjgList?.length);
         console.log('🔍 [realAPI] SBDC 更新 - safeData:', safeData);
@@ -3287,10 +3565,10 @@ class RealAPIService {
           monitordate: cleanData.monitordate ?
             (cleanData.monitordate.includes(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate)
             : undefined,
-          ybjgDTOList: savedLists.ybjgDTOList,
-          tspPddataDTOList: savedLists.tspPddataDTOList,
-          tspBxdataDTOList: savedLists.tspBxdataDTOList,
-        };
+        ybjgDTOList: savedLists.ybjgDTOList,
+        tspPddataDTOList: savedLists.tspPddataDTOList,
+        tspBxdataDTOList: savedLists.tspBxdataDTOList,
+      };
       }
 
       console.log('🔄 [realAPI] updateGeophysicalMethod 发送重构数据:', JSON.stringify(safeData, null, 2));
@@ -3338,16 +3616,49 @@ class RealAPIService {
 
   /**
    * 删除物探法记录
+   * @param id 记录ID (ybPk)
+   * @param method 物探方法代码 (1:TSP, 2:HSP, 3:LDSN, 4:DCBFS, 5:GFBZLD, 6:SBDC, 9:WZJC)
    */
-  async deleteGeophysicalMethod(id: string): Promise<{ success: boolean }> {
+  async deleteGeophysicalMethod(id: string, method?: number): Promise<{ success: boolean }> {
     try {
-      const response = await del<BaseResponse>(`/api/v1/wtf/${id}`);
+      // 根据method确定API路径
+      let apiPath = '';
+      switch (method) {
+        case 1:
+          apiPath = `/api/v1/wtf/tsp/${id}`;
+          break;
+        case 2:
+          apiPath = `/api/v1/wtf/hsp/${id}`;
+          break;
+        case 3:
+          apiPath = `/api/v1/wtf/ldsn/${id}`;
+          break;
+        case 4:
+          apiPath = `/api/v1/wtf/dcbfs/${id}`;
+          break;
+        case 5:
+          apiPath = `/api/v1/wtf/gfbzld/${id}`;
+          break;
+        case 6:
+          apiPath = `/api/v1/wtf/sbdc/${id}`;
+          break;
+        case 9:
+          apiPath = `/api/v1/wtf/wzjc/${id}`;
+          break;
+        default:
+          // 默认使用tsp路径
+          apiPath = `/api/v1/wtf/tsp/${id}`;
+          console.warn('⚠️ [realAPI] deleteGeophysicalMethod 未知method:', method, '，使用默认tsp路径');
+      }
+      
+      console.log('🔍 [realAPI] deleteGeophysicalMethod 删除路径:', apiPath, 'method:', method);
+      const response = await del<any>(apiPath);
 
-      if (response.resultcode === 200) {
+      if (response === true || response?.resultcode === 200 || response?.resultcode === 0) {
         console.log('✅ [realAPI] deleteGeophysicalMethod 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] deleteGeophysicalMethod 失败:', response.message);
+        console.error('❌ [realAPI] deleteGeophysicalMethod 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -3404,6 +3715,22 @@ class RealAPIService {
   async updateDrillingMethod(id: string, data: any): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('🔍 [realAPI] updateDrillingMethod 原始数据:', data);
+      const method = data.method;
+      
+      // 根据 method 区分处理
+      if (method === 14) {
+        // 加深炮孔
+        return await this.updateJspk(id, data);
+      }
+      
+      // 超前水平钻 (method === 13) 继续原有逻辑
+      console.log('🔍 [realAPI] updateDrillingMethod ID字段:', {
+        传入id: id,
+        ybPk: data.ybPk,
+        cqspzPk: data.cqspzPk,
+        cqspzId: data.cqspzId,
+        jspkPk: data.jspkPk,
+      });
       
       // 清理数据
       const cleanData: any = { ...data };
@@ -3426,6 +3753,12 @@ class RealAPIService {
       delete cleanData.createdate;
       
       // 构建 ybjgDTOList
+      // dzjb 转 grade 的映射：green=0(绿色), yellow=2(黄色), red=1(红色)
+      const dzjbToGrade = (dzjb: string): number => {
+        const map: Record<string, number> = { 'green': 0, 'yellow': 2, 'red': 1 };
+        return map[dzjb] ?? 0;
+      };
+      
       const ybjgDTOList = (cleanData.ybjgDTOList || []).map((item: any) => {
         let finalSdkilo = item.sdkilo;
         if (item.sdkiloEnd !== undefined && item.sdkiloEnd !== null) {
@@ -3435,48 +3768,97 @@ class RealAPIService {
         if (item.edkiloEnd !== undefined && item.edkiloEnd !== null) {
           finalEdkilo = (Number(item.edkilo) || 0) * 1000 + (Number(item.edkiloEnd) || 0);
         }
-        return {
-          // 新增时 ybjgPk/ybjgId 应该为 null，编辑时保留原有值
-          ybjgPk: item.ybjgPk || null,
-          ybjgId: item.ybjgId || item.ybjgPk || null,
-          ybPk: item.ybPk || cleanData.ztfPk || null,
+        // 优先使用 grade，如果没有则从 dzjb 转换
+        const gradeValue = item.grade !== undefined ? Number(item.grade) : (item.dzjb ? dzjbToGrade(item.dzjb) : 0);
+        // 基础数据字段（不含pk/id）
+        const baseData: any = {
           dkname: item.dkname || 'DK',
           sdkilo: finalSdkilo !== undefined ? Math.round(Number(finalSdkilo)) : 0,
           edkilo: finalEdkilo !== undefined ? Math.round(Number(finalEdkilo)) : 0,
           ybjgTime: item.ybjgTime ? (item.ybjgTime.includes?.(' ') ? item.ybjgTime.replace(' ', 'T') : item.ybjgTime) : undefined,
           risklevel: item.risklevel || '',
-          grade: item.grade !== undefined ? Number(item.grade) : 0,
+          grade: gradeValue,  // 地质级别：0=绿色, 1=红色, 2=黄色
           wylevel: item.wylevel !== undefined ? Number(item.wylevel) : 0,
           jlresult: item.jlresult || '',
         };
+        // 只有编辑已有记录时才发送pk/id字段
+        if (item.ybjgPk) {
+          baseData.ybjgPk = item.ybjgPk;
+          baseData.ybjgId = item.ybjgId || item.ybjgPk;
+          baseData.ybPk = item.ybPk;
+        }
+        return baseData;
       });
       
-      // 构建钻孔列表
-      const cqspzZkzzDTOList = (cleanData.cqspzZkzzDTOList || []).map((item: any) => ({
-        zkzzPk: item.zkzzPk || null,
-        zkzzId: item.zkzzId || item.zkzzPk || 0,
-        ztfPk: item.ztfPk || cleanData.ztfPk || 0,
-        zkbh: item.zkbh || '',
-        zkwz: item.zkwz || '',
-        zkfx: item.zkfx || '',
-        zkqj: item.zkqj !== undefined ? Number(item.zkqj) : 0,
-        zksd: item.zksd !== undefined ? Number(item.zksd) : 0,
-        zkzj: item.zkzj !== undefined ? Number(item.zkzj) : 0,
-        kssj: item.kssj ? (item.kssj.includes?.(' ') ? item.kssj.replace(' ', 'T') : item.kssj) : undefined,
-        jssj: item.jssj ? (item.jssj.includes?.(' ') ? item.jssj.replace(' ', 'T') : item.jssj) : undefined,
-      }));
+      // 构建钻孔列表（超前水平钻）
+      const cqspzZkzzDTOList = (cleanData.cqspzZkzzDTOList || cleanData.zkList || []).map((item: any) => {
+        // 构建钻孔记录列表
+        const ztjlbList = (item.cqspzZkzzZtjlbDTOList || item.cqspzZkzzZtjlbVOList || []).map((record: any) => ({
+          cqspzZkzzZtjlbPk: record.cqspzZkzzZtjlbPk || null,
+          cqspzZkzzZtjlbId: record.cqspzZkzzZtjlbId || null,
+          cqspzZkzzPk: record.cqspzZkzzPk || null,
+          kssj: record.kssj ? (record.kssj.includes?.(' ') ? record.kssj.replace(' ', 'T') : record.kssj) : undefined,
+          jssj: record.jssj ? (record.jssj.includes?.(' ') ? record.jssj.replace(' ', 'T') : record.jssj) : undefined,
+          zksd: record.zksd !== undefined ? Number(record.zksd) : 0,
+          zkpressure: record.zkpressure !== undefined ? Number(record.zkpressure) : 0,
+          zkspeed: record.zkspeed !== undefined ? Number(record.zkspeed) : 0,
+          kwwaterpre: record.kwwaterpre !== undefined ? Number(record.kwwaterpre) : 0,
+          kwwaterspe: record.kwwaterspe !== undefined ? Number(record.kwwaterspe) : 0,
+          dzms: record.dzms || '',
+          kwzbxl: record.kwzbxl || '',
+        }));
+        
+        // 构建地层信息列表
+        const dcxxList = (item.cqspzZkzzDcxxDTOList || item.cqspzZkzzDcxxVOList || []).map((info: any) => ({
+          cqspzZkzzDcxxPk: info.cqspzZkzzDcxxPk || null,
+          cqspzZkzzDcxxId: info.cqspzZkzzDcxxId || null,
+          cqspzZkzzPk: info.cqspzZkzzPk || null,
+          dcdh: info.dcdh || '',
+          dclc: info.dclc !== undefined ? Number(info.dclc) : 0,
+          fchd: info.fchd !== undefined ? Number(info.fchd) : 0,
+          cslcz: info.cslcz !== undefined ? Number(info.cslcz) : 0,
+          csl: info.csl !== undefined ? Number(info.csl) : 0,
+          cywz: info.cywz || '',
+          gcdzjj: info.gcdzjj || '',
+        }));
+        
+        return {
+          cqspzZkzzPk: item.cqspzZkzzPk || null,
+          cqspzZkzzId: item.cqspzZkzzId || null,
+          cqspzPk: item.cqspzPk || cleanData.cqspzPk || null,
+          kwbh: item.kwbh || '',
+          jgdjl: item.jgdjl !== undefined ? Number(item.jgdjl) : 0,
+          jzxxjl: item.jzxxjl !== undefined ? Number(item.jzxxjl) : 0,
+          kwljangle: item.kwljangle !== undefined ? Number(item.kwljangle) : 0,
+          kwpjangle: item.kwpjangle !== undefined ? Number(item.kwpjangle) : 0,
+          zkzj: item.zkzj !== undefined ? Number(item.zkzj) : 0,
+          zjcode: item.zjcode || '',
+          kssj: item.kssj ? (item.kssj.includes?.(' ') ? item.kssj.replace(' ', 'T') : item.kssj) : undefined,
+          jssj: item.jssj ? (item.jssj.includes?.(' ') ? item.jssj.replace(' ', 'T') : item.jssj) : undefined,
+          kkwzsyt: item.kkwzsyt || '',
+          sfqx: item.sfqx !== undefined ? Number(item.sfqx) : 0,
+          qxpic: item.qxpic || '',
+          remark: item.remark || '',
+          cqspzZkzzZtjlbDTOList: ztjlbList,
+          cqspzZkzzDcxxDTOList: dcxxList,
+        };
+      });
       
-      // 构建安全的提交数据
+      // 构建安全的提交数据 - 不发送cqspzPk/cqspzId字段，让后端从URL中的ybPk自动查找关联记录
+      const ybPkValue = cleanData.ybPk ? Number(cleanData.ybPk) : Number(id);
       const safeData = {
-        ztfPk: Number(cleanData.ztfPk) || 0,
-        ztfId: cleanData.ztfId || '',
+        // ID 字段 - 只发送 ybPk 和 ybId，不发送 cqspzPk/cqspzId
+        ybPk: ybPkValue,
+        ybId: cleanData.ybId ? Number(cleanData.ybId) : ybPkValue,
+        // 基本字段
         siteId: String(cleanData.siteId || ''),
-        method: cleanData.method !== undefined ? Number(cleanData.method) : 13,
         dkname: cleanData.dkname || 'DK',
         dkilo: cleanData.dkilo !== undefined ? Math.round(Number(cleanData.dkilo)) : 0,
         ybLength: cleanData.ybLength !== undefined ? Number(cleanData.ybLength) : 0,
-        monitordate: cleanData.monitordate ? 
-          (cleanData.monitordate.includes?.(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate) 
+        monitordate: cleanData.monitordate
+          ? cleanData.monitordate.includes?.(' ')
+            ? cleanData.monitordate.replace(' ', 'T')
+            : cleanData.monitordate
           : undefined,
         testname: cleanData.testname || '',
         testno: cleanData.testno || '',
@@ -3491,15 +3873,61 @@ class RealAPIService {
         suggestion: cleanData.suggestion || '',
         solution: cleanData.solution || '',
         remark: cleanData.remark || '',
+        method: cleanData.method !== undefined ? Number(cleanData.method) : 13,
         flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
         submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
+        // 超前水平钻特有字段（不含图片字段，图片需通过单独接口上传）
+        kwtype: cleanData.kwtype !== undefined ? Number(cleanData.kwtype) : 1,
+        // 分段信息列表 - 直接使用已处理的ybjgDTOList（不含pk/id字段）
         ybjgDTOList: ybjgDTOList,
-        cqspzZkzzDTOList: cqspzZkzzDTOList,
+        // 钻孔列表
+        cqspzZkzzDTOList: cqspzZkzzDTOList.map((item: any) => ({
+          kwbh: item.kwbh || '',
+          jgdjl: item.jgdjl,
+          jzxxjl: item.jzxxjl,
+          kwljangle: item.kwljangle,
+          kwpjangle: item.kwpjangle,
+          zkzj: item.zkzj,
+          zjcode: item.zjcode || '',
+          kssj: item.kssj,
+          jssj: item.jssj,
+          // kkwzsyt 和 qxpic 是图片字段，需通过单独接口上传
+          sfqx: item.sfqx,
+          remark: item.remark || '',
+          // 钻孔记录列表
+          cqspzZkzzZtjlbDTOList: (item.cqspzZkzzZtjlbDTOList || []).map((record: any) => ({
+            kssj: record.kssj,
+            jssj: record.jssj,
+            zksd: record.zksd,
+            zkpressure: record.zkpressure,
+            zkspeed: record.zkspeed,
+            kwwaterpre: record.kwwaterpre,
+            kwwaterspe: record.kwwaterspe,
+            dzms: record.dzms || '',
+            kwzbxl: record.kwzbxl || '',
+          })),
+          // 地层信息列表
+          cqspzZkzzDcxxDTOList: (item.cqspzZkzzDcxxDTOList || []).map((info: any) => ({
+            dcdh: info.dcdh || '',
+            dclc: info.dclc,
+            fchd: info.fchd,
+            cslcz: info.cslcz,
+            csl: info.csl,
+            cywz: info.cywz || '',
+            gcdzjj: info.gcdzjj || '',
+          })),
+        })),
       };
       
       console.log('🔍 [realAPI] updateDrillingMethod 清理后数据:', safeData);
       
-      const response = await put<any>(`/api/v1/ztf/${id}`, safeData);
+      // 超前水平钻：优先使用 ybPk（因为API路径是 /api/v1/ztf/cqspz/{ybPk}）
+      // 根据实际 API 测试，应该使用 ybPk 而不是 cqspzPk
+      const actualId = cleanData.ybPk || cleanData.cqspzPk || id;
+      const apiPath = `/api/v1/ztf/cqspz/${actualId}`;
+      console.log('🔍 [realAPI] 超前水平钻 API路径:', apiPath, '(ybPk:', cleanData.ybPk, ', cqspzPk:', cleanData.cqspzPk, ', 传入id:', id, ', 实际使用:', actualId, ')');
+      
+      const response = await put<any>(apiPath, safeData);
       console.log('🔍 [realAPI] updateDrillingMethod 响应:', response);
 
       if (isSuccessResponse(response)) {
@@ -3511,6 +3939,117 @@ class RealAPIService {
       }
     } catch (error: any) {
       console.error('❌ [realAPI] updateDrillingMethod 异常:', error);
+      return { success: false, message: error?.message || '网络异常' };
+    }
+  }
+
+  /**
+   * 更新加深炮孔记录
+   */
+  private async updateJspk(id: string, data: any): Promise<{ success: boolean; message?: string }> {
+    try {
+      console.log('🔍 [realAPI] updateJspk 原始数据:', data);
+      
+      // dzjb 转 grade 的映射：green=0(绿色), yellow=2(黄色), red=1(红色)
+      const dzjbToGrade = (dzjb: string): number => {
+        const map: Record<string, number> = { 'green': 0, 'yellow': 2, 'red': 1 };
+        return map[dzjb] ?? 0;
+      };
+      
+      // 构建 ybjgDTOList
+      const ybjgDTOList = (data.ybjgDTOList || data.ybjgVOList || []).map((item: any) => {
+        let finalSdkilo = item.sdkilo;
+        if (item.sdkiloEnd !== undefined && item.sdkiloEnd !== null) {
+          finalSdkilo = (Number(item.sdkilo) || 0) * 1000 + (Number(item.sdkiloEnd) || 0);
+        }
+        let finalEdkilo = item.edkilo;
+        if (item.edkiloEnd !== undefined && item.edkiloEnd !== null) {
+          finalEdkilo = (Number(item.edkilo) || 0) * 1000 + (Number(item.edkiloEnd) || 0);
+        }
+        const gradeValue = item.grade !== undefined ? Number(item.grade) : (item.dzjb ? dzjbToGrade(item.dzjb) : 0);
+        // 基础数据字段（不含pk/id）
+        const baseData: any = {
+          dkname: item.dkname || 'DK',
+          sdkilo: finalSdkilo !== undefined ? Math.round(Number(finalSdkilo)) : 0,
+          edkilo: finalEdkilo !== undefined ? Math.round(Number(finalEdkilo)) : 0,
+          ybjgTime: item.ybjgTime ? String(item.ybjgTime).replace(' ', 'T') : undefined,
+          risklevel: item.risklevel || '',
+          grade: gradeValue,
+          wylevel: item.wylevel !== undefined ? Number(item.wylevel) : 0,
+          jlresult: item.jlresult || '',
+        };
+        // 只有编辑已有记录时才发送pk/id字段
+        if (item.ybjgPk) {
+          baseData.ybjgPk = item.ybjgPk;
+          baseData.ybjgId = item.ybjgId || item.ybjgPk;
+          baseData.ybPk = item.ybPk;
+        }
+        return baseData;
+      });
+      
+      // 构建 jspkDataDTOList（加深炮孔数据列表）- 不发送pk/id字段
+      const jspkDataSource = data.jspkDataDTOList || data.ztfJspkVOList || data.jspkDataVOList || data.zkList || [];
+      console.log('🔍 [realAPI] updateJspk 钻孔数据来源:', jspkDataSource);
+      const jspkDataDTOList = jspkDataSource.map((item: any) => ({
+        zkwz: item.zkwz || '',
+        wcj: item.wcj !== undefined ? Number(item.wcj) : 0,
+        zkcd: item.zkcd !== undefined ? Number(item.zkcd) : 0,
+        dzqkjs: item.dzqkjs || '',
+      }));
+      console.log('🔍 [realAPI] updateJspk 转换后钻孔数据:', jspkDataDTOList);
+      
+      // 构建提交数据 - 不发送jspkPk/jspkId字段，让后端从URL中的ybPk自动查找关联记录
+      const ybPkValue = data.ybPk ? Number(data.ybPk) : Number(id);
+      const safeData = {
+        // ID 字段 - 只发送 ybPk 和 ybId
+        ybPk: ybPkValue,
+        ybId: data.ybId ? Number(data.ybId) : ybPkValue,
+        // 基本字段
+        siteId: String(data.siteId || ''),
+        dkname: data.dkname || 'DK',
+        dkilo: data.dkilo !== undefined ? Math.round(Number(data.dkilo)) : 0,
+        ybLength: data.ybLength !== undefined ? Number(data.ybLength) : 0,
+        monitordate: data.monitordate ? String(data.monitordate).replace(' ', 'T') : undefined,
+        createdate: data.createdate ? String(data.createdate).replace(' ', 'T') : undefined,
+        testname: data.testname || '',
+        testno: data.testno || '',
+        testtel: data.testtel || undefined,  // 空字符串改为 undefined
+        monitorname: data.monitorname || '',
+        monitorno: data.monitorno || '',
+        monitortel: data.monitortel || undefined,  // 空字符串改为 undefined
+        supervisorname: data.supervisorname || '',
+        supervisorno: data.supervisorno || '',
+        supervisortel: data.supervisortel || undefined,  // 空字符串改为 undefined
+        conclusionyb: data.conclusionyb || '',
+        suggestion: data.suggestion || '',
+        solution: data.solution || '',
+        remark: data.remark || undefined,  // 空字符串改为 undefined
+        method: 14,
+        flag: data.flag !== undefined ? Number(data.flag) : 0,
+        submitFlag: data.submitFlag !== undefined ? Number(data.submitFlag) : 0,
+        kwtype: data.kwtype !== undefined ? Number(data.kwtype) : 2,
+        ybjgDTOList: ybjgDTOList,
+        jspkDataDTOList: jspkDataDTOList,
+      };
+      
+      // API 路径使用 ybPk（根据 API 文档：/api/v1/ztf/jspk/{ybPk}）
+      const ybPk = data.ybPk || data.jspkPk || id;
+      const apiPath = `/api/v1/ztf/jspk/${ybPk}`;
+      console.log('🔍 [realAPI] updateJspk 提交数据:', safeData);
+      console.log('🔍 [realAPI] updateJspk API路径:', apiPath);
+      
+      const response = await put<any>(apiPath, safeData);
+      console.log('🔍 [realAPI] updateJspk 响应:', response);
+      
+      if (isSuccessResponse(response)) {
+        console.log('✅ [realAPI] updateJspk 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateJspk 失败:', response?.message || response);
+        return { success: false, message: response?.message || '更新失败' };
+      }
+    } catch (error: any) {
+      console.error('❌ [realAPI] updateJspk 异常:', error);
       return { success: false, message: error?.message || '网络异常' };
     }
   }
@@ -3533,6 +4072,72 @@ class RealAPIService {
     } catch (error) {
       console.error('❌ [realAPI] deleteDrillingMethod 异常:', error);
       return { success: false };
+    }
+  }
+
+  /**
+   * 上传超前水平钻文件
+   * POST /api/v1/ztf/cqspz/{ybPk}/file
+   * @param ybPk 预报主键
+   * @param data 文件数据 (CqspzFileDTO)
+   * @returns 上传结果
+   */
+  async uploadDrillingFile(ybPk: number, data: {
+    siteId: string;
+    images?: File | null;
+    addition?: File | null;
+    cqspzZkzzFileDTOList?: Array<{
+      cqspzZkzzPk: number;
+      kkwzsyt?: File | null;
+      qxpic?: File | null;
+    }>;
+  }): Promise<{ success: boolean; message?: string }> {
+    try {
+      console.log('🚀 [realAPI] uploadDrillingFile 调用:', { ybPk, data });
+      
+      // 使用 FormData 上传文件
+      const formData = new FormData();
+      formData.append('ybPk', String(ybPk));
+      formData.append('siteId', data.siteId);
+      
+      if (data.images) {
+        formData.append('images', data.images);
+      }
+      if (data.addition) {
+        formData.append('addition', data.addition);
+      }
+      
+      // 处理钻孔文件列表
+      if (data.cqspzZkzzFileDTOList && data.cqspzZkzzFileDTOList.length > 0) {
+        data.cqspzZkzzFileDTOList.forEach((item, index) => {
+          formData.append(`cqspzZkzzFileDTOList[${index}].cqspzZkzzPk`, String(item.cqspzZkzzPk));
+          if (item.kkwzsyt) {
+            formData.append(`cqspzZkzzFileDTOList[${index}].kkwzsyt`, item.kkwzsyt);
+          }
+          if (item.qxpic) {
+            formData.append(`cqspzZkzzFileDTOList[${index}].qxpic`, item.qxpic);
+          }
+        });
+      }
+      
+      const response = await post<any>(`/api/v1/ztf/cqspz/${ybPk}/file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('🔍 [realAPI] uploadDrillingFile 响应:', response);
+      
+      if (isSuccessResponse(response)) {
+        console.log('✅ [realAPI] uploadDrillingFile 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] uploadDrillingFile 失败:', response?.message || response);
+        return { success: false, message: response?.message || '上传失败' };
+      }
+    } catch (error: any) {
+      console.error('❌ [realAPI] uploadDrillingFile 异常:', error);
+      return { success: false, message: error?.message || '网络异常' };
     }
   }
 
@@ -3750,7 +4355,8 @@ class RealAPIService {
       }
       delete cleanData.ybjgVOList;
       
-      // 移除时间戳字段
+      // 保存 createdate 后再移除时间戳字段
+      const savedCreatedate = cleanData.createdate || data.createdate;
       delete cleanData.gmtCreate;
       delete cleanData.gmtModified;
       delete cleanData.createdate;
@@ -3781,17 +4387,19 @@ class RealAPIService {
         };
       });
       
-      // 构建安全的提交数据
+      // 构建安全的提交数据 - 按照 DssmDTO 文档
       const safeData = {
-        dssmPk: Number(cleanData.dssmPk) || 0,
-        dssmId: cleanData.dssmId || '',
+        // 基础字段
+        ybPk: Number(cleanData.ybPk) || 0,
+        ybId: Number(cleanData.ybId) || 0,
         siteId: String(cleanData.siteId || ''),
         dkname: cleanData.dkname || 'DK',
-        sdkilo: cleanData.sdkilo !== undefined ? Math.round(Number(cleanData.sdkilo)) : 0,
-        edkilo: cleanData.edkilo !== undefined ? Math.round(Number(cleanData.edkilo)) : 0,
+        dkilo: cleanData.dkilo !== undefined ? Math.round(Number(cleanData.dkilo)) : 0,
+        ybLength: cleanData.ybLength !== undefined ? Number(cleanData.ybLength) : 0,
         monitordate: cleanData.monitordate ? 
           (cleanData.monitordate.includes?.(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate) 
           : undefined,
+        createdate: savedCreatedate || new Date().toISOString(),
         testname: cleanData.testname || '',
         testno: cleanData.testno || '',
         testtel: cleanData.testtel || '',
@@ -3805,25 +4413,23 @@ class RealAPIService {
         suggestion: cleanData.suggestion || '',
         solution: cleanData.solution || '',
         remark: cleanData.remark || '',
+        method: 8, // 洞身素描
         flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
         submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
-        // 洞身素描特有字段
-        ycmc: cleanData.ycmc || '',
-        ycys: cleanData.ycys || '',
-        ycjg: cleanData.ycjg || '',
-        ycfh: cleanData.ycfh || '',
-        ycqt: cleanData.ycqt || '',
-        jlcs: cleanData.jlcs || '',
-        jlcx: cleanData.jlcx || '',
-        jlqj: cleanData.jlqj || '',
-        jlkd: cleanData.jlkd || '',
-        jlmj: cleanData.jlmj || '',
-        jlcw: cleanData.jlcw || '',
-        dsqk: cleanData.dsqk || '',
-        dslx: cleanData.dslx || '',
-        dsll: cleanData.dsll || '',
-        dsph: cleanData.dsph || '',
         ybjgDTOList: ybjgDTOList,
+        // 洞身素描特有字段 - dssmId 为 0 时使用 dssmPk
+        dssmPk: Number(cleanData.dssmPk) || 0,
+        dssmId: Number(cleanData.dssmId) || Number(cleanData.dssmPk) || 0,
+        beginkilo: cleanData.beginkilo !== undefined ? Math.round(Number(cleanData.beginkilo)) : 0,
+        dssmLength: cleanData.dssmLength !== undefined ? Number(cleanData.dssmLength) : 0,
+        sjwydj: cleanData.sjwydj !== undefined ? Number(cleanData.sjwydj) : 0,
+        sgwydj: cleanData.sgwydj !== undefined ? Number(cleanData.sgwydj) : 0,
+        sjdzms: cleanData.sjdzms || '',
+        sgdztz: cleanData.sgdztz || '',
+        sggztz: cleanData.sggztz || '',
+        shswtz: cleanData.shswtz || '',
+        // 图片字段需要通过单独的文件上传接口处理，不在 PUT 接口中传递
+        // zbqsmt, zbqxct, gbsmt, gbxct, ybqsmt, ybqxct, addition 等图片字段已移除
       };
       
       console.log('🔍 [realAPI] updateTunnelSketch 清理后数据:', safeData);
@@ -3904,12 +4510,17 @@ class RealAPIService {
       }
       delete cleanData.ybjgVOList;
       
-      // 移除时间戳字段
+      // 移除时间戳字段（保留 createdate）
       delete cleanData.gmtCreate;
       delete cleanData.gmtModified;
-      delete cleanData.createdate;
       
-      // 构建 ybjgDTOList - 分段信息
+      // dzjb 转 grade 的映射：green=0(绿色), yellow=2(黄色), red=1(红色)
+      const dzjbToGrade = (dzjb: string): number => {
+        const map: Record<string, number> = { 'green': 0, 'yellow': 2, 'red': 1 };
+        return map[dzjb] ?? 0;
+      };
+      
+      // 构建 ybjgDTOList - 分段信息（新增时不发送pk/id字段）
       const ybjgDTOList = (cleanData.ybjgDTOList || []).map((item: any) => {
         // 处理里程值
         let finalSdkilo = item.sdkilo;
@@ -3920,31 +4531,63 @@ class RealAPIService {
         if (item.edkiloEnd !== undefined && item.edkiloEnd !== null) {
           finalEdkilo = (Number(item.edkilo) || 0) * 1000 + (Number(item.edkiloEnd) || 0);
         }
-        return {
-          ybjgPk: item.ybjgPk || null,
-          ybjgId: item.ybjgId || item.ybjgPk || null,
-          ybPk: item.ybPk || cleanData.dbbcPk || null,
+        // 优先使用 grade，如果没有则从 dzjb 转换
+        const gradeValue = item.grade !== undefined ? Number(item.grade) : (item.dzjb ? dzjbToGrade(item.dzjb) : 0);
+        // 基础数据字段（不含pk/id）
+        const baseData: any = {
           dkname: item.dkname || 'DK',
           sdkilo: finalSdkilo !== undefined ? Math.round(Number(finalSdkilo)) : 0,
           edkilo: finalEdkilo !== undefined ? Math.round(Number(finalEdkilo)) : 0,
           ybjgTime: item.ybjgTime ? (item.ybjgTime.includes?.(' ') ? item.ybjgTime.replace(' ', 'T') : item.ybjgTime) : undefined,
           risklevel: item.risklevel || '',
-          grade: item.grade !== undefined ? Number(item.grade) : 0,
+          grade: gradeValue,  // 地质级别：0=绿色, 1=红色, 2=黄色
           wylevel: item.wylevel !== undefined ? Number(item.wylevel) : 0,
           jlresult: item.jlresult || '',
         };
+        // 只有编辑已有记录时才发送pk/id字段
+        if (item.ybjgPk) {
+          baseData.ybjgPk = item.ybjgPk;
+          baseData.ybjgId = item.ybjgId || item.ybjgPk;
+          baseData.ybPk = item.ybPk;
+        }
+        return baseData;
       });
       
-      // 构建安全的提交数据
-      const safeData = {
-        dbbcPk: Number(cleanData.dbbcPk) || Number(id) || 0,
-        dbbcId: cleanData.dbbcId || '',
+      // 调试：打印原始数据中的ID字段
+      console.log('🔍 [realAPI] updateSurfaceSupplement 原始数据ID字段:', {
+        ybPk: cleanData.ybPk,
+        ybId: cleanData.ybId,
+        dbbcPk: cleanData.dbbcPk,
+        dbbcId: cleanData.dbbcId,
+        传入id: id
+      });
+      
+      // 构建更新数据 - 根据API文档，更新时需要在请求体中包含所有必要字段
+      // PUT /api/v1/dbbc/{ybPk}
+      // 构建基础数据
+      const ybPkValue = cleanData.ybPk ? Number(cleanData.ybPk) : Number(id);
+      
+      // 检查 dbbcPk 是否有效（如果 dbbcPk 存在且大于 0）
+      const dbbcPkValue = cleanData.dbbcPk ? Number(cleanData.dbbcPk) : 0;
+      const dbbcIdValue = cleanData.dbbcId ? Number(cleanData.dbbcId) : 0;
+      
+      console.log('🔍 [realAPI] updateSurfaceSupplement ID检查:', {
+        ybPkValue,
+        dbbcPkValue,
+        dbbcIdValue,
+        原始dbbcPk: cleanData.dbbcPk,
+        原始dbbcId: cleanData.dbbcId
+      });
+      
+      const safeData: any = {
+        // ID字段 - ybPk 和 ybId 必须包含
+        ybPk: ybPkValue,
+        ybId: cleanData.ybId ? Number(cleanData.ybId) : ybPkValue,
+        // 基本字段
         siteId: String(cleanData.siteId || ''),
         dkname: cleanData.dkname || 'DK',
         dkilo: cleanData.dkilo !== undefined ? Math.round(Number(cleanData.dkilo)) : 0,
-        monitordate: cleanData.monitordate ? 
-          (cleanData.monitordate.includes?.(' ') ? cleanData.monitordate.replace(' ', 'T') : cleanData.monitordate) 
-          : undefined,
+        ybLength: cleanData.ybLength !== undefined && cleanData.ybLength !== 0 ? Number(cleanData.ybLength) : (cleanData.dbbcLength || 0),
         testname: cleanData.testname || '',
         testno: cleanData.testno || '',
         testtel: cleanData.testtel || '',
@@ -3960,13 +4603,11 @@ class RealAPIService {
         remark: cleanData.remark || '',
         flag: cleanData.flag !== undefined ? Number(cleanData.flag) : 0,
         submitFlag: cleanData.submitFlag !== undefined ? Number(cleanData.submitFlag) : 0,
-        method: 12, // 地表补充的method为12
+        method: cleanData.method !== undefined ? Number(cleanData.method) : 12,
         // 地表补充特有字段
         dbbcLength: cleanData.dbbcLength !== undefined ? Number(cleanData.dbbcLength) : 0,
         sjwydj: cleanData.sjwydj !== undefined ? Number(cleanData.sjwydj) : 0,
         sjqk: cleanData.sjqk !== undefined ? Number(cleanData.sjqk) : 0,
-        beginkiloStart: cleanData.beginkiloStart !== undefined ? Number(cleanData.beginkiloStart) : undefined,
-        beginkiloEnd: cleanData.beginkiloEnd !== undefined ? Number(cleanData.beginkiloEnd) : undefined,
         dcyx: cleanData.dcyx || '',
         dbry: cleanData.dbry || '',
         tsdz: cleanData.tsdz || '',
@@ -3975,9 +4616,40 @@ class RealAPIService {
         ybjgDTOList: ybjgDTOList,
       };
       
+      // 可选字段 - 只有有值时才添加
+      if (cleanData.monitordate) {
+        safeData.monitordate = cleanData.monitordate.includes?.(' ') 
+          ? cleanData.monitordate.replace(' ', 'T') 
+          : cleanData.monitordate;
+      }
+      // createdate - 更新时保留原始创建时间，如果没有则使用当前时间
+      const originalCreatedate = cleanData.createdate || (data as any).createdate;
+      if (originalCreatedate) {
+        safeData.createdate = String(originalCreatedate).includes(' ') 
+          ? String(originalCreatedate).replace(' ', 'T') 
+          : originalCreatedate;
+      } else {
+        // 如果没有createdate，使用当前时间，格式：YYYY-MM-DDTHH:mm:ss
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        safeData.createdate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      }
+      console.log('🔍 [realAPI] createdate处理:', { original: originalCreatedate, final: safeData.createdate });
+      // 处理开始里程
+      if (cleanData.beginkiloStart !== undefined || cleanData.beginkiloEnd !== undefined) {
+        safeData.beginkilo = (Number(cleanData.beginkiloStart) || 0) * 1000 + (Number(cleanData.beginkiloEnd) || 0);
+      } else if (cleanData.beginkilo !== undefined) {
+        safeData.beginkilo = Number(cleanData.beginkilo);
+      }
+      
       console.log('🔍 [realAPI] updateSurfaceSupplement 清理后数据:', safeData);
       
-      const response = await put<any>(`/api/v1/dbbc/${id}`, safeData);
+      // API 路径使用传入的id参数（应该是ybPk，根据api-docs.json）
+      // 不再从cleanData中获取ID，直接使用传入的id
+      const apiPath = `/api/v1/dbbc/${id}`;
+      console.log('🔍 [realAPI] updateSurfaceSupplement API路径:', apiPath, '(传入id:', id, ', cleanData.ybPk:', cleanData.ybPk, ', cleanData.dbbcPk:', cleanData.dbbcPk, ')');
+      
+      const response = await put<any>(apiPath, safeData);
       console.log('🔍 [realAPI] updateSurfaceSupplement 响应:', response);
 
       if (isSuccessResponse(response)) {
@@ -4403,18 +5075,19 @@ class RealAPIService {
         return { records: [], total: 0, current: 1, size: 10, pages: 0 };
       }
 
+      // /api/v1/dbbc/list 是 GET 请求
       const queryParams = {
         siteId: params.siteId,
-        type: 5,  // 5=地表补充
+        type: 5,  // 5=地表补充（type必填，method不填）
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
 
       console.log('🚀 [realAPI] getSurfaceSupplementList 调用参数:', params);
-      console.log('📤 [realAPI] 地表补充请求参数:', queryParams);
+      console.log('📤 [realAPI] 地表补充请求参数（GET）:', queryParams);
 
       const response = await get<any>('/api/v1/dbbc/list', { params: queryParams });
-      console.log('🔍 [realAPI] getSurfaceSupplementList 响应:', response);
+      console.log('🔍 [realAPI] getSurfaceSupplementList 原始响应:', response);
       console.log('🔍 [realAPI] getSurfaceSupplementList 响应的所有键:', response ? Object.keys(response) : 'null');
 
       // 兼容多种响应格式
@@ -4426,14 +5099,24 @@ class RealAPIService {
         console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式1: 直接分页数据');
       }
       // 格式2: 包装在 dbbcIPage 字段中 { dbbcIPage: { records, total, ... } }
+      // 根据swagger-api-docs.json，返回DbbcPageVO，包含dbbcIPage
       else if (response && response.dbbcIPage) {
         pageData = response.dbbcIPage;
         console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式2: dbbcIPage字段');
       }
       // 格式3: 标准响应格式 { resultcode: 200, data: { records, ... } }
       else if ((response?.resultcode === 200 || response?.resultcode === 0) && response?.data) {
+        // data 可能是 DbbcPageVO（包含dbbcIPage）或直接是分页数据
+        if (response.data.dbbcIPage) {
+          pageData = response.data.dbbcIPage;
+          console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式3a: data.dbbcIPage');
+        } else if (response.data.records !== undefined) {
         pageData = response.data;
-        console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式3: 标准响应格式');
+          console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式3b: data直接是分页数据');
+        } else {
+          pageData = response.data;
+          console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式3c: data');
+        }
       }
 
       if (pageData) {
@@ -4445,6 +5128,14 @@ class RealAPIService {
           pages: pageData.pages || 1
         };
         console.log('✅ [realAPI] getSurfaceSupplementList 返回数据:', result);
+        // 打印第一条记录的所有字段，帮助调试ID问题
+        if (result.records.length > 0) {
+          console.log('🔍 [realAPI] getSurfaceSupplementList 第一条记录的所有字段:', Object.keys(result.records[0]));
+          console.log('🔍 [realAPI] getSurfaceSupplementList 第一条记录详情:', JSON.stringify(result.records[0], null, 2));
+          // 特别检查ID字段
+          const firstRecord = result.records[0];
+          console.log('🔍 [realAPI] ID字段检查 - dbbcPk:', firstRecord.dbbcPk, ', ybPk:', firstRecord.ybPk, ', dbbcId:', firstRecord.dbbcId, ', ybId:', firstRecord.ybId);
+        }
         return result;
       }
       
@@ -4458,12 +5149,16 @@ class RealAPIService {
 
   /**
    * 获取地表补充信息（单个记录）
+   * @param ybPk 预报主键（根据api-docs.json，API路径为 /api/v1/dbbc/{ybPk}）
    */
   async getSurfaceSupplementInfo(ybPk: string): Promise<any> {
     try {
       console.log('🔍 [realAPI] getSurfaceSupplementInfo 请求, ybPk:', ybPk);
-      const response = await get<any>(`/api/v1/dbbc/${ybPk}`);
+      const apiPath = `/api/v1/dbbc/${ybPk}`;
+      console.log('🔍 [realAPI] getSurfaceSupplementInfo API路径:', apiPath);
+      const response = await get<any>(apiPath);
       console.log('🔍 [realAPI] getSurfaceSupplementInfo 响应:', response);
+      console.log('🔍 [realAPI] getSurfaceSupplementInfo 响应的所有键:', response ? Object.keys(response) : 'null');
 
       // 兼容两种响应格式：
       // 1. 直接返回数据对象 {ybPk, dbbcPk, ...}
@@ -4472,11 +5167,13 @@ class RealAPIService {
         // 如果响应直接包含ybPk或dbbcPk，说明是直接返回的数据
         if (response.ybPk || response.dbbcPk) {
           console.log('✅ [realAPI] getSurfaceSupplementInfo 直接返回数据');
+          console.log('🔍 [realAPI] getSurfaceSupplementInfo 数据详情:', JSON.stringify(response, null, 2));
           return response;
         }
         // 如果是包装格式
         if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
           console.log('✅ [realAPI] getSurfaceSupplementInfo 包装格式返回');
+          console.log('🔍 [realAPI] getSurfaceSupplementInfo 数据详情:', JSON.stringify(response.data, null, 2));
           return response.data;
         }
       }

@@ -18,6 +18,7 @@ import {
 } from '@arco-design/web-react'
 import { IconLeft, IconSave, IconPlus } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
+import realAPI from '../services/realAPI'
 import SegmentModal, { SegmentData } from '../components/SegmentModal'
 
 const { TextArea } = Input
@@ -54,10 +55,18 @@ function DrillingEditPage() {
   const [dcInfoList, setDcInfoList] = useState<any[]>([])
   const [dcInfoModalVisible, setDcInfoModalVisible] = useState(false)
   const [dcInfoForm] = Form.useForm()
+  const [editingDcInfoIndex, setEditingDcInfoIndex] = useState<number | null>(null)
 
   // 分段信息（预报结果）列表
   const [forecastList, setForecastList] = useState<any[]>([])
   const [forecastModalVisible, setForecastModalVisible] = useState(false)
+
+  // 文件上传状态
+  const [additionFile, setAdditionFile] = useState<File | null>(null)  // 附件（编辑报告）
+  const [imagesFile, setImagesFile] = useState<File | null>(null)      // 作业现场照片
+  const [uploading, setUploading] = useState(false)
+  const [existingAddition, setExistingAddition] = useState<string>('')  // 已有附件URL
+  const [existingImages, setExistingImages] = useState<string>('')      // 已有图片URL
   const [currentForecast, setCurrentForecast] = useState<any>(null)
 
   // 获取详情数据
@@ -87,9 +96,13 @@ function DrillingEditPage() {
           
           // 设置钻孔列表
           const isJspk = method === '14'
-          const zkData = isJspk ? (data.jspkDataVOList || data.jspkDataDTOList) : (data.cqspzZkzzVOList || data.cqspzZkzzDTOList)
+          // 加深炮孔使用 ztfJspkVOList，超前水平钻使用 cqspzZkzzVOList
+          const zkData = isJspk 
+            ? (data.ztfJspkVOList || data.jspkDataVOList || data.jspkDataDTOList) 
+            : (data.cqspzZkzzVOList || data.cqspzZkzzDTOList)
           if (zkData) {
             setZkList(zkData)
+            console.log('📊 [编辑页] 从路由状态加载钻孔数据:', zkData)
           }
           
           // 设置分段信息列表（预报结果）
@@ -101,6 +114,13 @@ function DrillingEditPage() {
         
         // 调用详情接口
         const detail = await apiAdapter.getDrillingDetail(id, method)
+        console.log('📥 [编辑页] 详情接口返回完整数据:', detail)
+        console.log('📥 [编辑页] 详情接口返回的钻孔相关字段:', {
+          ztfJspkVOList: detail?.ztfJspkVOList,
+          jspkDataVOList: detail?.jspkDataVOList,
+          jspkZkzzVOList: detail?.jspkZkzzVOList,
+          cqspzZkzzVOList: detail?.cqspzZkzzVOList,
+        })
         if (detail) {
           // 里程拆分：将 dkilo 拆分为 dkiloKm 和 dkiloM
           let dkiloKm, dkiloM;
@@ -114,15 +134,29 @@ function DrillingEditPage() {
           
           // 设置钻孔列表
           const isJspk = method === '14'
-          const zkData = isJspk ? detail.jspkZkzzVOList : detail.cqspzZkzzVOList
+          // 加深炮孔使用 ztfJspkVOList，超前水平钻使用 cqspzZkzzVOList
+          const zkData = isJspk 
+            ? (detail.ztfJspkVOList || detail.jspkDataVOList || detail.jspkZkzzVOList) 
+            : detail.cqspzZkzzVOList
           if (zkData) {
             setZkList(zkData)
+            console.log('📊 [编辑页] 从API加载钻孔数据:', zkData)
           }
           
           // 设置分段信息列表（预报结果）
           if (detail.ybjgVOList) {
             setForecastList(detail.ybjgVOList)
             console.log('📊 [编辑页] 从API加载分段信息:', detail.ybjgVOList)
+          }
+          
+          // 设置已有文件
+          if (detail.addition) {
+            setExistingAddition(detail.addition)
+            console.log('📎 [编辑页] 已有附件:', detail.addition)
+          }
+          if (detail.images) {
+            setExistingImages(detail.images)
+            console.log('🖼️ [编辑页] 已有图片:', detail.images)
           }
         }
       } catch (error) {
@@ -160,15 +194,64 @@ function DrillingEditPage() {
       const dkilo = (values.dkiloKm || 0) * 1000 + (values.dkiloM || 0);
       
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
+      const isJspkMethod = currentMethod === 14
+      // 清理原始数据中的列表字段，避免覆盖用户修改的数据
+      const cleanOriginalData = { ...originalData }
+      delete cleanOriginalData.ybjgVOList
+      delete cleanOriginalData.ybjgDTOList
+      delete cleanOriginalData.cqspzZkzzVOList
+      delete cleanOriginalData.cqspzZkzzDTOList
+      delete cleanOriginalData.jspkDataVOList
+      delete cleanOriginalData.jspkDataDTOList
+      delete cleanOriginalData.ztfJspkVOList
+      
       const submitData = {
-        ...originalData,  // 先用原始数据
+        ...cleanOriginalData,  // 先用清理后的原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
         dkilo,            // 使用合并后的里程值
-        ybPk: null,       // 临时设置为null，后端修复后改回
+        // 编辑时使用原始数据的 PK 值，新增时为 null
+        ybPk: isNew ? null : (originalData?.ybPk || originalData?.cqspzPk || originalData?.jspkPk || null),
+        // 超前水平钻字段
+        cqspzPk: isNew ? null : (originalData?.cqspzPk || null),
+        cqspzId: isNew ? null : (originalData?.cqspzId || null),
+        // 加深炮孔字段
+        jspkPk: isNew ? null : (originalData?.jspkPk || null),
+        jspkId: isNew ? null : (originalData?.jspkId || null),
         siteId: siteId || originalData?.siteId,
         method: currentMethod,  // 钻探法：13=超前水平钻，14=加深炮孔
-        zkList
+        kwtype: currentMethod === 13 ? 1 : 2,  // 1=超前水平钻，2=加深炮孔
+        // 根据 method 使用不同的钻孔列表字段名
+        ...(isJspkMethod 
+          ? { jspkDataDTOList: zkList }  // 加深炮孔
+          : { cqspzZkzzDTOList: zkList }  // 超前水平钻
+        ),
+        // 分段信息列表 - 新增时不发送pk/id字段
+        ybjgDTOList: forecastList.map(item => {
+          // 基础数据字段（不含pk/id）
+          const baseData: any = {
+            dkname: item.dkname || 'DK',
+            sdkilo: item.sdkilo,
+            sdkiloEnd: item.sdkiloEnd,
+            edkilo: item.edkilo,
+            edkiloEnd: item.edkiloEnd,
+            ybjgTime: item.ybjgTime,
+            risklevel: item.risklevel || '',
+            wylevel: item.wylevel,
+            grade: item.grade,
+            dzjb: item.dzjb,  // 保留dzjb字段，API层会转换为grade
+            jlresult: item.jlresult || ''
+          };
+          // 只有编辑已有记录时才发送pk/id字段
+          if (item.ybjgPk) {
+            baseData.ybjgPk = item.ybjgPk;
+            baseData.ybjgId = item.ybjgId || item.ybjgPk;
+            baseData.ybPk = item.ybPk;
+          }
+          return baseData;
+        }),
       }
+      
+      console.log('📊 [钻探法] forecastList:', forecastList)
       // 清理临时字段
       delete submitData.dkiloKm;
       delete submitData.dkiloM;
@@ -202,12 +285,18 @@ function DrillingEditPage() {
   const handleAddZk = () => {
     setCurrentZk(null)
     zkForm.resetFields()
+    // 清空钻孔记录和地层信息列表
+    setZkRecordList([])
+    setDcInfoList([])
     setZkModalVisible(true)
   }
 
   const handleEditZk = (record: any, index: number) => {
     setCurrentZk({ ...record, index })
     zkForm.setFieldsValue(record)
+    // 加载已有的钻孔记录和地层信息
+    setZkRecordList(record.cqspzZkzzZtjlbDTOList || record.cqspzZkzzZtjlbVOList || [])
+    setDcInfoList(record.cqspzZkzzDcxxDTOList || record.cqspzZkzzDcxxVOList || [])
     setZkModalVisible(true)
   }
 
@@ -229,16 +318,38 @@ function DrillingEditPage() {
       await zkForm.validate()
       const values = zkForm.getFieldsValue()
       
+      // 构建完整的钻孔数据，包含钻孔记录和地层信息
+      const zkData = {
+        ...values,
+        // 钻孔记录列表
+        cqspzZkzzZtjlbDTOList: zkRecordList.map(record => ({
+          ...record,
+          cqspzZkzzZtjlbPk: record.cqspzZkzzZtjlbPk || null,
+          cqspzZkzzZtjlbId: record.cqspzZkzzZtjlbId || null,
+          cqspzZkzzPk: record.cqspzZkzzPk || null,
+        })),
+        // 地层信息列表
+        cqspzZkzzDcxxDTOList: dcInfoList.map(info => ({
+          ...info,
+          cqspzZkzzDcxxPk: info.cqspzZkzzDcxxPk || null,
+          cqspzZkzzDcxxId: info.cqspzZkzzDcxxId || null,
+          cqspzZkzzPk: info.cqspzZkzzPk || null,
+        })),
+      }
+      
       if (currentZk && currentZk.index !== undefined) {
         // 编辑
         const newList = [...zkList]
-        newList[currentZk.index] = values
+        newList[currentZk.index] = zkData
         setZkList(newList)
       } else {
         // 新增
-        setZkList([...zkList, values])
+        setZkList([...zkList, zkData])
       }
       
+      // 清空临时列表
+      setZkRecordList([])
+      setDcInfoList([])
       setZkModalVisible(false)
       Message.success(currentZk ? '修改成功' : '添加成功')
     } catch (error) {
@@ -279,8 +390,8 @@ function DrillingEditPage() {
       setForecastList(newList)
       Message.success('修改成功')
     } else {
-      // 新增
-      setForecastList([...forecastList, { ...data, ybjgPk: 0, ybjgId: 0, ybPk: 0 }])
+      // 新增 - PK字段设为null，后端会自动生成
+      setForecastList([...forecastList, { ...data, ybjgPk: null, ybjgId: null, ybPk: null }])
       Message.success('添加成功')
     }
     setForecastModalVisible(false)
@@ -423,20 +534,33 @@ function DrillingEditPage() {
     },
     { 
       title: '地质类型', 
-      dataIndex: 'dzjb', 
+      dataIndex: 'grade', 
       width: 80,
       align: 'center' as const,
-      render: (val: string) => {
-        const colorMap: Record<string, { bg: string; text: string; label: string }> = {
+      render: (val: number, record: any) => {
+        // 优先使用 dzjb（用户在表单中选择的字符串），如果没有则使用 grade（后端返回的数字）
+        // grade: 0=绿色, 1=红色, 2=黄色
+        const colorMapByGrade: Record<number, { bg: string; text: string; label: string }> = {
+          0: { bg: '#52c41a', text: '#fff', label: '绿色' },
+          1: { bg: '#ff4d4f', text: '#fff', label: '红色' },
+          2: { bg: '#faad14', text: '#fff', label: '黄色' },
+        }
+        const colorMapByDzjb: Record<string, { bg: string; text: string; label: string }> = {
           'green': { bg: '#52c41a', text: '#fff', label: '绿色' },
           'yellow': { bg: '#faad14', text: '#fff', label: '黄色' },
           'red': { bg: '#ff4d4f', text: '#fff', label: '红色' },
         }
-        const config = colorMap[val]
+        // 优先使用 dzjb（前端表单选择的值），其次使用 grade（后端返回的值）
+        let config = null
+        if (record.dzjb && colorMapByDzjb[record.dzjb]) {
+          config = colorMapByDzjb[record.dzjb]
+        } else if (val !== undefined && val !== null && colorMapByGrade[val]) {
+          config = colorMapByGrade[val]
+        }
         if (config) {
           return <span style={{ backgroundColor: config.bg, color: config.text, padding: '2px 8px', borderRadius: 4 }}>{config.label}</span>
         }
-        return val || '-'
+        return '-'
       }
     },
     { 
@@ -696,39 +820,7 @@ function DrillingEditPage() {
                   border
                 />
 
-                {/* 下次超前地质预报 */}
-                <div style={{ 
-                  marginTop: 24, 
-                  padding: '16px 20px', 
-                  backgroundColor: '#f7f8fa', 
-                  borderRadius: 4,
-                  border: '1px solid #e5e6eb'
-                }}>
-                  <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                    <span style={{ fontSize: 14, fontWeight: 500 }}>下次超前地质预报</span>
-                  </div>
-                  <Row gutter={24}>
-                    <Col span={12}>
-                      <Form.Item label="下次预报方法" field="nextMethod">
-                        <Select placeholder="请选择下次预报方法" allowClear>
-                          <Select.Option value={1}>TSP</Select.Option>
-                          <Select.Option value={2}>地质雷达</Select.Option>
-                          <Select.Option value={3}>瞬变电磁</Select.Option>
-                          <Select.Option value={4}>红外探水</Select.Option>
-                          <Select.Option value={5}>掌子面素描</Select.Option>
-                          <Select.Option value={6}>洞身素描</Select.Option>
-                          <Select.Option value={13}>超前水平钻</Select.Option>
-                          <Select.Option value={14}>加深炮孔</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item label="预报开始里程" field="nextStartKilo">
-                        <Input placeholder="请输入预报开始里程" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </div>
+                {/* 下次超前地质预报 - 已隐藏 */}
               </div>
             </TabPane>
 
@@ -783,6 +875,7 @@ function DrillingEditPage() {
                   <span style={{ color: '#f53f3f', marginRight: 2 }}>*</span>
                   <span style={{ width: 120 }}>附件（编辑报告）：</span>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+                    {/* 已有附件或新选择的附件预览 */}
                     <div style={{ 
                       width: 60, 
                       height: 70, 
@@ -795,14 +888,22 @@ function DrillingEditPage() {
                       backgroundColor: '#fafafa'
                     }}>
                       <div style={{ fontSize: 28, color: '#165DFF' }}>📄</div>
-                      <div style={{ fontSize: 10, color: '#86909c', marginTop: 4 }}>1860675885...</div>
+                      <div style={{ fontSize: 10, color: '#86909c', marginTop: 4, maxWidth: 55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {additionFile ? additionFile.name : (existingAddition ? existingAddition.substring(0, 10) + '...' : '无文件')}
+                      </div>
                     </div>
                     <Upload
-                      action="/api/v1/ztf/cqspz/upload"
+                      autoUpload={false}
                       accept=".doc,.docx,.pdf"
                       showUploadList={false}
                       onChange={(fileList) => {
-                        console.log('附件上传:', fileList)
+                        if (fileList.length > 0) {
+                          const file = fileList[fileList.length - 1].originFile
+                          if (file) {
+                            setAdditionFile(file)
+                            console.log('📎 附件已选择:', file.name)
+                          }
+                        }
                       }}
                     >
                       <div style={{ 
@@ -818,9 +919,14 @@ function DrillingEditPage() {
                         backgroundColor: '#fff'
                       }}>
                         <div style={{ fontSize: 18, color: '#86909c' }}>↑</div>
-                        <div style={{ fontSize: 12, color: '#165DFF' }}>修改</div>
+                        <div style={{ fontSize: 12, color: '#165DFF' }}>{additionFile ? '重选' : '选择'}</div>
                       </div>
                     </Upload>
+                    {additionFile && (
+                      <Button size="small" type="text" status="danger" onClick={() => setAdditionFile(null)}>
+                        清除
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -829,6 +935,7 @@ function DrillingEditPage() {
                   <span style={{ color: '#f53f3f', marginRight: 2 }}>*</span>
                   <span style={{ width: 120 }}>作业现场照片：</span>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+                    {/* 已有图片或新选择的图片预览 */}
                     <div style={{ 
                       width: 60, 
                       height: 70, 
@@ -840,14 +947,37 @@ function DrillingEditPage() {
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      <span style={{ fontSize: 11, color: '#86909c' }}>预览图</span>
+                      {imagesFile ? (
+                        <img 
+                          src={URL.createObjectURL(imagesFile)} 
+                          alt="预览" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : existingImages ? (
+                        <img 
+                          src={existingImages} 
+                          alt="已有图片" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#86909c' }}>无图片</span>
+                      )}
                     </div>
                     <Upload
-                      action="/api/v1/ztf/cqspz/upload"
+                      autoUpload={false}
                       accept="image/*"
                       showUploadList={false}
                       onChange={(fileList) => {
-                        console.log('作业现场照片上传:', fileList)
+                        if (fileList.length > 0) {
+                          const file = fileList[fileList.length - 1].originFile
+                          if (file) {
+                            setImagesFile(file)
+                            console.log('🖼️ 图片已选择:', file.name)
+                          }
+                        }
                       }}
                     >
                       <div style={{ 
@@ -863,15 +993,65 @@ function DrillingEditPage() {
                         backgroundColor: '#fff'
                       }}>
                         <div style={{ fontSize: 18, color: '#86909c' }}>↑</div>
-                        <div style={{ fontSize: 12, color: '#165DFF' }}>修改</div>
+                        <div style={{ fontSize: 12, color: '#165DFF' }}>{imagesFile ? '重选' : '选择'}</div>
                       </div>
                     </Upload>
+                    {imagesFile && (
+                      <Button size="small" type="text" status="danger" onClick={() => setImagesFile(null)}>
+                        清除
+                      </Button>
+                    )}
                   </div>
                 </div>
 
                 {/* 提交按钮 */}
                 <div style={{ textAlign: 'right', marginTop: 20 }}>
-                  <Button type="primary">提交</Button>
+                  <Button 
+                    type="primary" 
+                    loading={uploading}
+                    disabled={!additionFile && !imagesFile}
+                    onClick={async () => {
+                      if (!originalData?.ybPk) {
+                        Message.warning('请先保存基本信息后再上传文件')
+                        return
+                      }
+                      if (!additionFile && !imagesFile) {
+                        Message.warning('请选择要上传的文件')
+                        return
+                      }
+                      
+                      setUploading(true)
+                      try {
+                        const result = await realAPI.uploadDrillingFile(originalData.ybPk, {
+                          siteId: siteId || originalData.siteId || '',
+                          images: imagesFile,
+                          addition: additionFile,
+                        })
+                        
+                        if (result.success) {
+                          Message.success('文件上传成功')
+                          // 清除已上传的文件状态
+                          if (additionFile) {
+                            setExistingAddition(additionFile.name)
+                            setAdditionFile(null)
+                          }
+                          if (imagesFile) {
+                            setExistingImages(URL.createObjectURL(imagesFile))
+                            setImagesFile(null)
+                          }
+                        } else {
+                          Message.error(result.message || '文件上传失败')
+                        }
+                      } catch (error: any) {
+                        console.error('❌ 文件上传异常:', error)
+                        Message.error(error?.message || '文件上传失败')
+                      } finally {
+                        setUploading(false)
+                      }
+                    }}
+                  >
+                    上传文件
+                  </Button>
                 </div>
               </div>
             </TabPane>
@@ -894,7 +1074,12 @@ function DrillingEditPage() {
         title="详情"
         visible={zkModalVisible}
         onOk={handleZkModalOk}
-        onCancel={() => setZkModalVisible(false)}
+        onCancel={() => {
+          setZkModalVisible(false)
+          // 关闭弹窗时清空临时数据
+          setZkRecordList([])
+          setDcInfoList([])
+        }}
         style={{ width: method === '14' ? 600 : 900 }}
         okText="确定"
         cancelText="取消"
@@ -966,17 +1151,32 @@ function DrillingEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="距掌面距离" field="jgdjl" rules={[{ required: true, message: '请输入距掌面距离' }]}>
+                    <Form.Item label="距掌面距离" field="jgdjl" rules={[{ 
+                      validator: (value, callback) => {
+                        if (value === undefined || value === null || value === '') callback('请输入距掌面距离')
+                        else callback()
+                      }
+                    }]}>
                       <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="距中心线距离" field="jzxxjl" rules={[{ required: true, message: '请输入距中心线距离' }]}>
+                    <Form.Item label="距中心线距离" field="jzxxjl" rules={[{ 
+                      validator: (value, callback) => {
+                        if (value === undefined || value === null || value === '') callback('请输入距中心线距离')
+                        else callback()
+                      }
+                    }]}>
                       <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="开孔立面角度" field="kwljangle" rules={[{ required: true, message: '请输入开孔立面角度' }]}>
+                    <Form.Item label="开孔立面角度" field="kwljangle" rules={[{ 
+                      validator: (value, callback) => {
+                        if (value === undefined || value === null || value === '') callback('请输入开孔立面角度')
+                        else callback()
+                      }
+                    }]}>
                       <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
                     </Form.Item>
                   </Col>
@@ -984,12 +1184,22 @@ function DrillingEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="开孔倾角角度" field="kwpjangle" rules={[{ required: true, message: '请输入开孔倾角角度' }]}>
+                    <Form.Item label="开孔倾角角度" field="kwpjangle" rules={[{ 
+                      validator: (value, callback) => {
+                        if (value === undefined || value === null || value === '') callback('请输入开孔倾角角度')
+                        else callback()
+                      }
+                    }]}>
                       <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="钻孔直径" field="zkzj" rules={[{ required: true, message: '请输入钻孔直径' }]}>
+                    <Form.Item label="钻孔直径" field="zkzj" rules={[{ 
+                      validator: (value, callback) => {
+                        if (value === undefined || value === null || value === '') callback('请输入钻孔直径')
+                        else callback()
+                      }
+                    }]}>
                       <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
                     </Form.Item>
                   </Col>
@@ -1002,7 +1212,7 @@ function DrillingEditPage() {
 
               <Row gutter={24}>
                 <Col span={8}>
-                  <Form.Item label="孔位坐标序列" field="kwzbxl" rules={[{ required: true, message: '请输入孔位坐标序列' }]}>
+                  <Form.Item label="孔位坐标序列" field="kwzbxl">
                     <Input placeholder="请输入" />
                   </Form.Item>
                 </Col>
@@ -1034,12 +1244,17 @@ function DrillingEditPage() {
 
               <Row gutter={24}>
                 <Col span={12}>
-                  <Form.Item label="备注" field="remark" rules={[{ required: true, message: '请输入备注' }]}>
+                  <Form.Item label="备注" field="remark">
                     <Input placeholder="无" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item label="是否取芯" field="sfqx" rules={[{ required: true, message: '请选择是否取芯' }]}>
+                  <Form.Item label="是否取芯" field="sfqx" rules={[{ 
+                    validator: (value, callback) => {
+                      if (value === undefined || value === null || value === '') callback('请选择是否取芯')
+                      else callback()
+                    }
+                  }]}>
                     <Select placeholder="请选择">
                       <Select.Option value={0}>不取芯</Select.Option>
                       <Select.Option value={1}>取芯</Select.Option>
@@ -1115,8 +1330,8 @@ function DrillingEditPage() {
                     )
                   }
                 ]}
-                data={zkRecordList}
-                rowKey={(record: any, index?: number) => `record-${index}`}
+                data={zkRecordList.map((item, idx) => ({ ...item, _idx: idx }))}
+                rowKey={(record: any) => `record-${record._idx}`}
                 pagination={false}
                 border
                 noDataElement={
@@ -1134,6 +1349,7 @@ function DrillingEditPage() {
               <div style={{ marginBottom: 16 }}>
                 <Button type="primary" icon={<IconPlus />} onClick={() => {
                   dcInfoForm.resetFields()
+                  setEditingDcInfoIndex(null)
                   setDcInfoModalVisible(true)
                 }}>
                   新增
@@ -1142,7 +1358,49 @@ function DrillingEditPage() {
               
               <Table
                 columns={[
-                  { title: '地层代号', dataIndex: 'dcdh', width: 100, align: 'center' as const },
+                  { 
+                    title: '地层代号', 
+                    dataIndex: 'dcdh', 
+                    width: 120, 
+                    align: 'center' as const,
+                    render: (val: number) => {
+                      const dcdhMap: Record<number, string> = {
+                        1: '全新世Qh', 2: '晚Q₃', 3: '中Q₂', 4: '早Q₁',
+                        5: '上新世N₂', 6: '中新世N₁', 7: '渐新世E₃', 8: '始新世E₂', 9: '古新世E₁',
+                        10: '晚白垩世K₂', 11: '晚白垩世K₂', 12: '晚白垩世K₂', 13: '晚白垩世K₂', 14: '晚白垩世K₂', 15: '晚白垩世K₂',
+                        16: '早白垩世K₁', 17: '早白垩世K₁', 18: '早白垩世K₁', 19: '早白垩世K₁', 20: '早白垩世K₁', 21: '早白垩世K₁',
+                        22: '晚侏罗世J₃', 23: '晚侏罗世J₃', 24: '晚侏罗世J₃',
+                        25: '中侏罗世J₂', 26: '中侏罗世J₂', 27: '中侏罗世J₂',
+                        28: '早侏罗世J₁', 29: '早侏罗世J₁', 30: '早侏罗世J₁', 31: '早侏罗世J₁',
+                        32: '晚三叠世T₃', 33: '晚三叠世T₃', 34: '晚三叠世T₃',
+                        35: '中三叠世T₂', 36: '中三叠世T₂',
+                        37: '早三叠世T₁', 38: '早三叠世T₁', 39: '早三叠世T₁',
+                        40: '晚二叠世P₂', 41: '晚二叠世P₂',
+                        42: '早二叠世P₁', 43: '早二叠世P₁', 44: '早二叠世P₁',
+                        45: '晚石炭世C₂', 46: '晚石炭世C₂',
+                        47: '早石炭世C₁', 48: '早石炭世C₁', 49: '早石炭世C₁', 50: '早石炭世C₁', 51: '早石炭世C₁',
+                        52: '晚泥盆世D₃', 53: '晚泥盆世D₃',
+                        54: '中泥盆世D₂', 55: '中泥盆世D₂',
+                        56: '早泥盆世D₁', 57: '早泥盆世D₁', 58: '早泥盆世D₁', 59: '早泥盆世D₁',
+                        60: '晚志留世S₃', 61: '晚志留世S₃',
+                        62: '中志留世S₂',
+                        63: '早志留世S₁', 64: '早志留世S₁', 65: '早志留世S₁',
+                        66: '钱塘江世O₃', 67: '钱塘江世O₃',
+                        68: '艾家山世O₃', 69: '艾家山世O₃',
+                        70: '扬子世O₂', 71: '扬子世O₂',
+                        72: '宜昌世O₁', 73: '宜昌世O₁',
+                        74: '晚寒武世∈₃', 75: '晚寒武世∈₃',
+                        76: '中寒武世∈₂', 77: '中寒武世∈₂', 78: '中寒武世∈₂',
+                        79: '早寒武世∈₁', 80: '早寒武世∈₁', 81: '早寒武世∈₁', 82: '早寒武世∈₁', 83: '早寒武世∈₁',
+                        84: '晚震旦世Z₂', 85: '晚震旦世Z₂',
+                        86: '早震旦世Z₁', 87: '早震旦世Z₁',
+                        88: '南华纪Nh', 89: '青白口纪Qb', 90: '蓟县纪Jx', 91: '长城纪Ch', 92: '滹沱纪Ht',
+                        93: '新太古代Ar₃', 94: '新太古代Ar₃', 95: '中太古代Ar₂', 96: '古太古代Ar₁', 97: '始太古代Ar₀',
+                        98: '冥古宙HD'
+                      }
+                      return dcdhMap[val] || val || '-'
+                    }
+                  },
                   { title: '底层里程值', dataIndex: 'dclc', width: 120, align: 'center' as const },
                   { title: '分层厚度', dataIndex: 'fchd', width: 100, align: 'center' as const },
                   { title: '出水位置', dataIndex: 'cslcz', width: 100, align: 'center' as const },
@@ -1151,26 +1409,40 @@ function DrillingEditPage() {
                   { title: '工程地质简述', dataIndex: 'gcdzjj', ellipsis: true },
                   {
                     title: '操作',
-                    width: 80,
+                    width: 120,
                     align: 'center' as const,
-                    render: (_: any, __: any, index: number) => (
-                      <Button 
-                        size="small" 
-                        type="text" 
-                        status="danger" 
-                        onClick={() => {
-                          const newList = [...dcInfoList]
-                          newList.splice(index, 1)
-                          setDcInfoList(newList)
-                        }}
-                      >
-                        删除
-                      </Button>
+                    render: (_: any, record: any, index: number) => (
+                      <Space>
+                        <Button 
+                          size="small" 
+                          type="text" 
+                          onClick={() => {
+                            // 编辑地层信息
+                            dcInfoForm.setFieldsValue(record)
+                            setEditingDcInfoIndex(index)
+                            setDcInfoModalVisible(true)
+                          }}
+                        >
+                          编辑
+                        </Button>
+                        <Button 
+                          size="small" 
+                          type="text" 
+                          status="danger" 
+                          onClick={() => {
+                            const newList = [...dcInfoList]
+                            newList.splice(index, 1)
+                            setDcInfoList(newList)
+                          }}
+                        >
+                          删除
+                        </Button>
+                      </Space>
                     )
                   }
                 ]}
-                data={dcInfoList}
-                rowKey={(record: any, index?: number) => `layer-${index}`}
+                data={dcInfoList.map((item, idx) => ({ ...item, _idx: idx }))}
+                rowKey={(record: any) => `layer-${record._idx}`}
                 pagination={false}
                 border
                 noDataElement={
@@ -1263,9 +1535,9 @@ function DrillingEditPage() {
                 label="转速" 
                 field="zkspeed" 
                 rules={[{ required: true, message: '请输入转速' }]}
-                extra="单位:转/分，范围值如55.5-55.8"
+                extra="单位:转/分，保留2位小数"
               >
-                <Input placeholder="如55.5-55.8" style={{ width: '100%' }} />
+                <InputNumber placeholder="如55.5" style={{ width: '100%' }} precision={2} min={0} />
               </Form.Item>
             </Col>
           </Row>
@@ -1340,21 +1612,48 @@ function DrillingEditPage() {
         </Form>
       </Modal>
 
-      {/* 地层信息新增弹窗 */}
+      {/* 地层信息新增/编辑弹窗 */}
       <Modal
-        title="详情"
+        title={editingDcInfoIndex !== null ? "编辑地层信息" : "新增地层信息"}
         visible={dcInfoModalVisible}
         onOk={async () => {
           try {
             const values = await dcInfoForm.validate()
-            setDcInfoList([...dcInfoList, values])
+            console.log('📤 地层信息表单值:', values)
+            // 确保数值保留两位小数
+            const formattedValues = {
+              ...values,
+              dclc: values.dclc !== undefined ? Number(Number(values.dclc).toFixed(2)) : undefined,
+              fchd: values.fchd !== undefined ? Number(Number(values.fchd).toFixed(2)) : undefined,
+              cslcz: values.cslcz !== undefined ? Number(Number(values.cslcz).toFixed(2)) : undefined,
+              csl: values.csl !== undefined ? Number(Number(values.csl).toFixed(2)) : undefined,
+            }
+            console.log('📤 格式化后地层信息:', formattedValues)
+            
+            if (editingDcInfoIndex !== null) {
+              // 编辑模式
+              const newList = [...dcInfoList]
+              newList[editingDcInfoIndex] = formattedValues
+              setDcInfoList(newList)
+              Message.success('修改成功')
+            } else {
+              // 新增模式
+              setDcInfoList([...dcInfoList, formattedValues])
+              Message.success('添加成功')
+            }
             setDcInfoModalVisible(false)
-            Message.success('添加成功')
-          } catch (e) {
-            // 验证失败
+            setEditingDcInfoIndex(null)
+            dcInfoForm.resetFields()
+          } catch (e: any) {
+            console.error('❌ 地层信息表单验证失败:', e)
+            Message.error('请填写必填项')
           }
         }}
-        onCancel={() => setDcInfoModalVisible(false)}
+        onCancel={() => {
+          setDcInfoModalVisible(false)
+          setEditingDcInfoIndex(null)
+          dcInfoForm.resetFields()
+        }}
         okText="确定"
         cancelText="取消"
         style={{ width: 700 }}
@@ -1375,57 +1674,105 @@ function DrillingEditPage() {
                     option.props.children.toLowerCase().indexOf(inputValue.toLowerCase()) >= 0
                   }
                 >
-                  {/* 地层代号选项 - 数据较多 */}
-                  <Select.Option value="Q4al">Q4al-第四系全新统冲积层</Select.Option>
-                  <Select.Option value="Q4dl">Q4dl-第四系全新统坡积层</Select.Option>
-                  <Select.Option value="Q4el">Q4el-第四系全新统残积层</Select.Option>
-                  <Select.Option value="Q4pl">Q4pl-第四系全新统洪积层</Select.Option>
-                  <Select.Option value="Q3al">Q3al-第四系上更新统冲积层</Select.Option>
-                  <Select.Option value="Q3dl">Q3dl-第四系上更新统坡积层</Select.Option>
-                  <Select.Option value="Q2al">Q2al-第四系中更新统冲积层</Select.Option>
-                  <Select.Option value="Q1al">Q1al-第四系下更新统冲积层</Select.Option>
-                  <Select.Option value="N2">N2-上新统</Select.Option>
-                  <Select.Option value="N1">N1-中新统</Select.Option>
-                  <Select.Option value="E3">E3-渐新统</Select.Option>
-                  <Select.Option value="E2">E2-始新统</Select.Option>
-                  <Select.Option value="E1">E1-古新统</Select.Option>
-                  <Select.Option value="K2">K2-白垩系上统</Select.Option>
-                  <Select.Option value="K1">K1-白垩系下统</Select.Option>
-                  <Select.Option value="J3">J3-侏罗系上统</Select.Option>
-                  <Select.Option value="J2">J2-侏罗系中统</Select.Option>
-                  <Select.Option value="J1">J1-侏罗系下统</Select.Option>
-                  <Select.Option value="T3">T3-三叠系上统</Select.Option>
-                  <Select.Option value="T2">T2-三叠系中统</Select.Option>
-                  <Select.Option value="T1">T1-三叠系下统</Select.Option>
-                  <Select.Option value="P2">P2-二叠系上统</Select.Option>
-                  <Select.Option value="P1">P1-二叠系下统</Select.Option>
-                  <Select.Option value="C3">C3-石炭系上统</Select.Option>
-                  <Select.Option value="C2">C2-石炭系中统</Select.Option>
-                  <Select.Option value="C1">C1-石炭系下统</Select.Option>
-                  <Select.Option value="D3">D3-泥盆系上统</Select.Option>
-                  <Select.Option value="D2">D2-泥盆系中统</Select.Option>
-                  <Select.Option value="D1">D1-泥盆系下统</Select.Option>
-                  <Select.Option value="S3">S3-志留系上统</Select.Option>
-                  <Select.Option value="S2">S2-志留系中统</Select.Option>
-                  <Select.Option value="S1">S1-志留系下统</Select.Option>
-                  <Select.Option value="O3">O3-奥陶系上统</Select.Option>
-                  <Select.Option value="O2">O2-奥陶系中统</Select.Option>
-                  <Select.Option value="O1">O1-奥陶系下统</Select.Option>
-                  <Select.Option value="∈3">∈3-寒武系上统</Select.Option>
-                  <Select.Option value="∈2">∈2-寒武系中统</Select.Option>
-                  <Select.Option value="∈1">∈1-寒武系下统</Select.Option>
-                  <Select.Option value="Z2">Z2-震旦系上统</Select.Option>
-                  <Select.Option value="Z1">Z1-震旦系下统</Select.Option>
-                  <Select.Option value="Pt3">Pt3-新元古界</Select.Option>
-                  <Select.Option value="Pt2">Pt2-中元古界</Select.Option>
-                  <Select.Option value="Pt1">Pt1-古元古界</Select.Option>
-                  <Select.Option value="Ar">Ar-太古界</Select.Option>
-                  <Select.Option value="γ">γ-花岗岩</Select.Option>
-                  <Select.Option value="δ">δ-闪长岩</Select.Option>
-                  <Select.Option value="ν">ν-辉长岩</Select.Option>
-                  <Select.Option value="β">β-玄武岩</Select.Option>
-                  <Select.Option value="λ">λ-流纹�ite</Select.Option>
-                  <Select.Option value="α">α-安山岩</Select.Option>
+                  {/* 地层代号选项 - 根据表A.10地层代号数据项 */}
+                  <Select.Option value={1}>Qh-全新世</Select.Option>
+                  <Select.Option value={2}>Q3-晚更新世(晚Q₃)</Select.Option>
+                  <Select.Option value={3}>Q2-中更新世(中Q₂)</Select.Option>
+                  <Select.Option value={4}>Q1-早更新世(早Q₁)</Select.Option>
+                  <Select.Option value={5}>N2-上新世</Select.Option>
+                  <Select.Option value={6}>N1-中新世</Select.Option>
+                  <Select.Option value={7}>E3-渐新世</Select.Option>
+                  <Select.Option value={8}>E2-始新世</Select.Option>
+                  <Select.Option value={9}>E1-古新世</Select.Option>
+                  <Select.Option value={10}>K2-晚白垩世</Select.Option>
+                  <Select.Option value={11}>K2-晚白垩世</Select.Option>
+                  <Select.Option value={12}>K2-晚白垩世</Select.Option>
+                  <Select.Option value={13}>K2-晚白垩世</Select.Option>
+                  <Select.Option value={14}>K2-晚白垩世</Select.Option>
+                  <Select.Option value={15}>K2-晚白垩世</Select.Option>
+                  <Select.Option value={16}>K1-早白垩世</Select.Option>
+                  <Select.Option value={17}>K1-早白垩世</Select.Option>
+                  <Select.Option value={18}>K1-早白垩世</Select.Option>
+                  <Select.Option value={19}>K1-早白垩世</Select.Option>
+                  <Select.Option value={20}>K1-早白垩世</Select.Option>
+                  <Select.Option value={21}>K1-早白垩世</Select.Option>
+                  <Select.Option value={22}>J3-晚侏罗世</Select.Option>
+                  <Select.Option value={23}>J3-晚侏罗世</Select.Option>
+                  <Select.Option value={24}>J3-晚侏罗世</Select.Option>
+                  <Select.Option value={25}>J2-中侏罗世</Select.Option>
+                  <Select.Option value={26}>J2-中侏罗世</Select.Option>
+                  <Select.Option value={27}>J2-中侏罗世</Select.Option>
+                  <Select.Option value={28}>J1-早侏罗世</Select.Option>
+                  <Select.Option value={29}>J1-早侏罗世</Select.Option>
+                  <Select.Option value={30}>J1-早侏罗世</Select.Option>
+                  <Select.Option value={31}>J1-早侏罗世</Select.Option>
+                  <Select.Option value={32}>T3-晚三叠世</Select.Option>
+                  <Select.Option value={33}>T3-晚三叠世</Select.Option>
+                  <Select.Option value={34}>T3-晚三叠世</Select.Option>
+                  <Select.Option value={35}>T2-中三叠世</Select.Option>
+                  <Select.Option value={36}>T2-中三叠世</Select.Option>
+                  <Select.Option value={37}>T1-早三叠世</Select.Option>
+                  <Select.Option value={38}>T1-早三叠世</Select.Option>
+                  <Select.Option value={39}>T1-早三叠世</Select.Option>
+                  <Select.Option value={40}>P2-晚二叠世</Select.Option>
+                  <Select.Option value={41}>P2-晚二叠世</Select.Option>
+                  <Select.Option value={42}>P1-早二叠世</Select.Option>
+                  <Select.Option value={43}>P1-早二叠世</Select.Option>
+                  <Select.Option value={44}>P1-早二叠世</Select.Option>
+                  <Select.Option value={45}>C2-晚石炭世</Select.Option>
+                  <Select.Option value={46}>C2-晚石炭世</Select.Option>
+                  <Select.Option value={47}>C1-早石炭世</Select.Option>
+                  <Select.Option value={48}>C1-早石炭世</Select.Option>
+                  <Select.Option value={49}>C1-早石炭世</Select.Option>
+                  <Select.Option value={50}>C1-早石炭世</Select.Option>
+                  <Select.Option value={51}>C1-早石炭世</Select.Option>
+                  <Select.Option value={52}>D3-晚泥盆世</Select.Option>
+                  <Select.Option value={53}>D3-晚泥盆世</Select.Option>
+                  <Select.Option value={54}>D2-中泥盆世</Select.Option>
+                  <Select.Option value={55}>D2-中泥盆世</Select.Option>
+                  <Select.Option value={56}>D1-早泥盆世</Select.Option>
+                  <Select.Option value={57}>D1-早泥盆世</Select.Option>
+                  <Select.Option value={58}>D1-早泥盆世</Select.Option>
+                  <Select.Option value={59}>D1-早泥盆世</Select.Option>
+                  <Select.Option value={60}>S3-晚志留世</Select.Option>
+                  <Select.Option value={61}>S3-晚志留世</Select.Option>
+                  <Select.Option value={62}>S2-中志留世</Select.Option>
+                  <Select.Option value={63}>S1-早志留世</Select.Option>
+                  <Select.Option value={64}>S1-早志留世</Select.Option>
+                  <Select.Option value={65}>S1-早志留世</Select.Option>
+                  <Select.Option value={66}>O3-钱塘江世</Select.Option>
+                  <Select.Option value={67}>O3-钱塘江世</Select.Option>
+                  <Select.Option value={68}>O3-艾家山世</Select.Option>
+                  <Select.Option value={69}>O3-艾家山世</Select.Option>
+                  <Select.Option value={70}>O2-扬子世</Select.Option>
+                  <Select.Option value={71}>O2-扬子世</Select.Option>
+                  <Select.Option value={72}>O1-宜昌世</Select.Option>
+                  <Select.Option value={73}>O1-宜昌世</Select.Option>
+                  <Select.Option value={74}>∈3-晚寒武世</Select.Option>
+                  <Select.Option value={75}>∈3-晚寒武世</Select.Option>
+                  <Select.Option value={76}>∈2-中寒武世</Select.Option>
+                  <Select.Option value={77}>∈2-中寒武世</Select.Option>
+                  <Select.Option value={78}>∈2-中寒武世</Select.Option>
+                  <Select.Option value={79}>∈1-早寒武世</Select.Option>
+                  <Select.Option value={80}>∈1-早寒武世</Select.Option>
+                  <Select.Option value={81}>∈1-早寒武世</Select.Option>
+                  <Select.Option value={82}>∈1-早寒武世</Select.Option>
+                  <Select.Option value={83}>∈1-早寒武世</Select.Option>
+                  <Select.Option value={84}>Z2-晚震旦世</Select.Option>
+                  <Select.Option value={85}>Z2-晚震旦世</Select.Option>
+                  <Select.Option value={86}>Z1-早震旦世</Select.Option>
+                  <Select.Option value={87}>Z1-早震旦世</Select.Option>
+                  <Select.Option value={88}>Nh-南华纪</Select.Option>
+                  <Select.Option value={89}>Qb-青白口纪</Select.Option>
+                  <Select.Option value={90}>Jx-蓟县纪</Select.Option>
+                  <Select.Option value={91}>Ch-长城纪</Select.Option>
+                  <Select.Option value={92}>Ht-滹沱纪</Select.Option>
+                  <Select.Option value={93}>Ar3-新太古代</Select.Option>
+                  <Select.Option value={94}>Ar3-新太古代</Select.Option>
+                  <Select.Option value={95}>Ar2-中太古代</Select.Option>
+                  <Select.Option value={96}>Ar1-古太古代</Select.Option>
+                  <Select.Option value={97}>Ar0-始太古代</Select.Option>
+                  <Select.Option value={98}>HD-冥古宙</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -1433,7 +1780,15 @@ function DrillingEditPage() {
               <Form.Item 
                 label="底层里程值" 
                 field="dclc" 
-                rules={[{ required: true, message: '请输入底层里程值' }]}
+                rules={[{ 
+                  validator: (value, callback) => {
+                    if (value === undefined || value === null || value === '') {
+                      callback('请输入底层里程值')
+                    } else {
+                      callback()
+                    }
+                  }
+                }]}
                 extra="单位:m，保留2位小数。例如DK215+763.32则上传215763.32"
               >
                 <InputNumber 
@@ -1450,7 +1805,6 @@ function DrillingEditPage() {
               <Form.Item 
                 label="分层厚度" 
                 field="fchd" 
-                rules={[{ required: true, message: '请输入分层厚度' }]}
                 extra="单位:m，保留2位小数，整数位不超过2位"
               >
                 <InputNumber 
@@ -1466,7 +1820,15 @@ function DrillingEditPage() {
               <Form.Item 
                 label="出水位置" 
                 field="cslcz" 
-                rules={[{ required: true, message: '请输入出水位置' }]}
+                rules={[{ 
+                  validator: (value, callback) => {
+                    if (value === undefined || value === null || value === '') {
+                      callback('请输入出水位置')
+                    } else {
+                      callback()
+                    }
+                  }
+                }]}
                 extra="单位:m，保留2位小数。无出水时上传0"
               >
                 <InputNumber 
@@ -1484,7 +1846,6 @@ function DrillingEditPage() {
               <Form.Item 
                 label="出水量" 
                 field="csl" 
-                rules={[{ required: true, message: '请输入出水量' }]}
                 extra="单位:m³/h，保留2位小数，整数位不超过5位"
               >
                 <InputNumber 

@@ -411,9 +411,11 @@ function GeologyForecastPage() {
     } else if (activeTab === 'drilling') {
       recordId = String(record.ztfPk || record.ybPk || record.id);
     } else if (activeTab === 'surface') {
-      // 地表补充：列表返回YbInfoVO，使用ybPk作为主键
+      // 地表补充：列表API返回YbInfoVO，只有ybPk字段
+      // 详情API路径为 /api/v1/dbbc/{ybPk}
+      // 使用ybPk作为主键
       recordId = String(record.ybPk || record.ybId || record.dbbcPk || record.id);
-      console.log('🔍 [查看详情] 地表补充 - ybPk:', record.ybPk, 'ybId:', record.ybId, '最终ID:', recordId);
+      console.log('🔍 [查看详情] 地表补充 - ybPk:', record.ybPk, 'ybId:', record.ybId, 'dbbcPk:', record.dbbcPk, '最终ID:', recordId);
     } else {
       recordId = String(record.id);
     }
@@ -463,9 +465,11 @@ function GeologyForecastPage() {
     } else if (activeTab === 'drilling') {
       recordId = String(record.ztfPk || record.ybPk || record.id);
     } else if (activeTab === 'surface') {
-      // 地表补充：列表返回YbInfoVO，使用ybPk作为主键
+      // 地表补充：列表API返回YbInfoVO，只有ybPk字段
+      // 详情/更新API路径为 /api/v1/dbbc/{ybPk}
+      // 使用ybPk作为主键
       recordId = String(record.ybPk || record.ybId || record.dbbcPk || record.id);
-      console.log('🔍 [编辑] 地表补充 - ybPk:', record.ybPk, 'ybId:', record.ybId, '最终ID:', recordId);
+      console.log('🔍 [编辑] 地表补充 - ybPk:', record.ybPk, 'ybId:', record.ybId, 'dbbcPk:', record.dbbcPk, '最终ID:', recordId);
     } else {
       recordId = String(record.id);
     }
@@ -522,74 +526,46 @@ function GeologyForecastPage() {
   }
 
   const handleUpload = async (record: any) => {
-    try {
-      const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.ybPk || record.id);
-      let result = null;
-      
-      // 根据当前选项卡调用对应的上传API
-      switch (activeTab) {
-        case 'geophysical':
-          result = await apiAdapter.uploadGeophysical(recordId);
-          break;
-        case 'palmSketch':
-        case 'tunnelSketch':
-        case 'drilling':
-        case 'surface':
-          Message.info('该类型暂不支持上传功能');
-          return;
-        default:
-          Message.info('暂不支持该类型的上传');
-          return;
-      }
-      
-      if (result?.success) {
-        Message.success('上传成功');
-        fetchMethodData(); // 刷新数据
-      } else {
-        Message.error('上传失败');
-      }
-    } catch (error) {
-      console.error('上传失败:', error);
-      Message.error('上传失败');
-    }
+    // 功能暂未实现
+    Message.info('上传功能暂未实现');
   }
 
   // 撤回已上传的数据
   const handleWithdraw = (record: any) => {
-    const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.ybPk || record.id);
-    const methodName = METHOD_MAP[record.method] || `ID: ${recordId}`;
-    
-    Modal.confirm({
-      title: '确认撤回',
-      content: `确定要撤回这条预报记录"${methodName}"吗？撤回后数据将变为编辑中状态。`,
-      okText: '确认撤回',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          // 调用撤回API，将submitFlag设置为0
-          const result = await apiAdapter.withdrawForecast(activeTab, recordId, record);
-          
-          if (result?.success) {
-            Message.success('撤回成功');
-            fetchMethodData(); // 刷新数据
-          } else {
-            Message.error('撤回失败');
-          }
-        } catch (error) {
-          console.error('撤回失败:', error);
-          Message.error('撤回失败');
-        }
-      }
-    })
+    // 功能暂未实现
+    Message.info('撤回功能暂未实现');
   }
 
   const handleDelete = (record: any) => {
-    const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.id);
-    const recordName = record.methodName || record.method || `ID: ${recordId}`;
+    console.log('🔍 [删除] 完整记录数据:', record);
+    console.log('🔍 [删除] 记录的所有键:', Object.keys(record));
+    
+    // 根据不同类型使用不同的主键字段
+    let recordId = '';
+    if (activeTab === 'geophysical') {
+      // 物探法：优先使用wtfPk，如果没有则使用ybPk
+      recordId = String(record.wtfPk || record.ybPk || record.id || '');
+      console.log('🔍 [删除] 物探法 - wtfPk:', record.wtfPk, 'ybPk:', record.ybPk, '最终ID:', recordId);
+    } else if (activeTab === 'palmSketch') {
+      recordId = String(record.zzmsmPk || record.ybPk || record.id || '');
+    } else if (activeTab === 'tunnelSketch') {
+      recordId = String(record.dssmPk || record.ybPk || record.id || '');
+    } else if (activeTab === 'drilling') {
+      recordId = String(record.ztfPk || record.ybPk || record.id || '');
+    } else if (activeTab === 'surface') {
+      recordId = String(record.ybPk || record.dbbcPk || record.id || '');
+    } else {
+      recordId = String(record.id || '');
+    }
+    
+    if (!recordId || recordId === 'undefined') {
+      Message.error('无法获取记录ID，删除失败');
+      return;
+    }
     
     Modal.confirm({
       title: '确认删除',
-      content: `确定要删除这条预报记录"${recordName}"吗？此操作不可恢复。`,
+      content: '确定要删除这条预报记录吗？此操作不可恢复。',
       okButtonProps: {
         status: 'danger'
       },
@@ -600,7 +576,8 @@ function GeologyForecastPage() {
           // 根据当前选项卡调用对应的删除API
           switch (activeTab) {
             case 'geophysical':
-              result = await apiAdapter.deleteGeophysical(recordId);
+              // 物探法需要传入method参数来确定删除路径
+              result = await apiAdapter.deleteGeophysical(recordId, record.method);
               break;
             case 'palmSketch':
               result = await apiAdapter.deletePalmSketch(recordId);
@@ -610,6 +587,9 @@ function GeologyForecastPage() {
               break;
             case 'drilling':
               result = await apiAdapter.deleteDrilling(recordId);
+              break;
+            case 'surface':
+              result = await apiAdapter.deleteSurfaceSupplement(recordId);
               break;
             default:
               Message.error('暂不支持该类型的删除');

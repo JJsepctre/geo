@@ -436,29 +436,35 @@ function ForecastComprehensivePage() {
     {
       title: '操作',
       width: 100,
-      render: (_: any, record: any) => (
-        <Button 
-          type="text" 
-          size="small" 
-          style={{ padding: 4 }}
-          onClick={() => handleOpenDisposalModal(record)}
-        >
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              backgroundColor: '#7c5cfc',
-              color: '#fff'
-            }}
+      render: (_: any, record: any) => {
+        // 已处置的记录不显示操作按钮
+        if (record.warndealflag === 1) {
+          return '-'
+        }
+        return (
+          <Button 
+            type="text" 
+            size="small" 
+            style={{ padding: 4 }}
+            onClick={() => handleOpenDisposalModal(record)}
           >
-            📋
-          </span>
-        </Button>
-      )
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                backgroundColor: '#7c5cfc',
+                color: '#fff'
+              }}
+            >
+              📋
+            </span>
+          </Button>
+        )
+      }
     }
   ]
 

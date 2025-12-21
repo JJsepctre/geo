@@ -321,6 +321,17 @@ function GeologyForecastEditPage() {
             console.log('🔍 [编辑页面] DCBFS测线列表为空或不存在');
           }
 
+          // 初始化GFBZLD电极距掌子面距离列表
+          if (data.gfbzldResultinfoVOList && data.gfbzldResultinfoVOList.length > 0) {
+            console.log('🔍 [编辑页面] 设置GFBZLD电极列表(VO):', data.gfbzldResultinfoVOList);
+            setGfbzldDjList(data.gfbzldResultinfoVOList);
+          } else if (data.gfbzldResultinfoDTOList && data.gfbzldResultinfoDTOList.length > 0) {
+            console.log('🔍 [编辑页面] 设置GFBZLD电极列表(DTO):', data.gfbzldResultinfoDTOList);
+            setGfbzldDjList(data.gfbzldResultinfoDTOList);
+          } else {
+            console.log('🔍 [编辑页面] GFBZLD电极列表为空或不存在');
+          }
+
           // 格式化日期
           const formattedDate = data.monitordate
             ? new Date(data.monitordate).toISOString().replace('T', ' ').split('.')[0]
@@ -419,6 +430,7 @@ function GeologyForecastEditPage() {
         tspBxdataDTOList: tspBxList,
         ldsnResultinfoDTOList: ldsnCdList, // LDSN测点列表
         dcbfsResultinfoDTOList: dcbfsCxList, // DCBFS测线布置列表
+        gfbzldResultinfoDTOList: gfbzldDjList, // GFBZLD电极距掌子面距离列表
       };
       
       console.log('💾 [handleSave] submitData.ybjgDTOList:', submitData.ybjgDTOList);
@@ -2414,12 +2426,12 @@ function GeologyForecastEditPage() {
                 <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '20px', fontWeight: 'bold' }}>高分辨直流电观测系统信息</div>
                 <Grid.Row gutter={24}>
                   <Grid.Col span={8}>
-                    <Form.Item label="供电电极数量" field="gddjsl" rules={[{ required: true, message: '请输入供电电极数量' }]}>
+                    <Form.Item label="供电电极数量" field="gddjnum" rules={[{ required: true, message: '请输入供电电极数量' }]}>
                       <InputNumber style={{ width: '100%' }} placeholder="请输入供电电极数量" min={0} precision={0} />
                     </Form.Item>
                   </Grid.Col>
                   <Grid.Col span={8}>
-                    <Form.Item label="测量电极测点数量" field="cldjcdsl" rules={[{ required: true, message: '请输入测量电极测点数量' }]}>
+                    <Form.Item label="测量电极测点数量" field="cldjnum" rules={[{ required: true, message: '请输入测量电极测点数量' }]}>
                       <InputNumber style={{ width: '100%' }} placeholder="请输入测量电极测点数量" min={0} precision={0} />
                     </Form.Item>
                   </Grid.Col>

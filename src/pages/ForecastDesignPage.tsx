@@ -331,6 +331,7 @@ function ForecastDesignPage() {
         designTimes: values.designTimes,
         author: values.author,
         modifyReason: values.modifyReason,
+        siteId: siteId,  // 传递当前页面的siteId
       }
       
       console.log('📤 [设计预报] 更新数据:', { startMileage, endMileage, submitData })
