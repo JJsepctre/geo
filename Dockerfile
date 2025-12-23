@@ -7,9 +7,14 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖
-# 设置淘宝镜像源加速
-RUN npm config set registry https://registry.npmmirror.com
-# 使用 npm ci 保证依赖版本一致，如果失败可以改回 npm install
+# 增加网络超时重试和关闭 ssl 严格校验（解决部分网络环境问题）
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retries 5 && \
+    npm config set strict-ssl false
+
+# 尝试安装
 RUN npm install
 
 # 复制源代码
