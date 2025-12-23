@@ -15,6 +15,9 @@ echo "1. 检测到 build 目录，准备更新..."
 
 # 2. 停止并移除旧容器
 echo "2. 停止并移除旧容器..."
+# 强制移除指定名称的容器，防止名称冲突
+docker rm -f geo-web-frontend || true
+# 停止 compose 服务
 docker compose down || true
 
 # 3. 重新构建并启动容器
