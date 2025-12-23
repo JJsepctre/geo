@@ -3,7 +3,9 @@ services:
   geo-web:
     build: .
     ports:
-      - "8098:80"  # 将宿主机的 8080 端口映射到容器的 80 端口
+      - "8098:80"  # 宿主机端口 8098 -> 容器端口 80
     restart: always
     container_name: geo-web-frontend
-
+    # 挂载日志目录（可选）
+    # volumes:
+    #   - ./logs:/var/log/nginx
